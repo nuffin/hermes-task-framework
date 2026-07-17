@@ -1,0 +1,65 @@
+digraph task_framework {
+  rankdir=TB;
+  bgcolor="#1a1a2e";
+  fontcolor="#e0e0e0";
+  fontname="Consolas";
+  nodesep=0.5;
+  ranksep=0.8;
+
+  node [shape=box style="filled,rounded" fontname="Consolas" fontsize=11];
+
+  subgraph cluster_0 {
+    label="方法论 (Methodology)";
+    style=filled;
+    fillcolor="#16213e";
+    fontcolor="#e0e0e0";
+    color="#0f3460";
+
+    decompose [label="任务分解\ndecompose()" fillcolor="#0f3460" fontcolor="#e0e0e0"];
+    catalog [label="操作目录\noperations/" fillcolor="#0f3460" fontcolor="#e0e0e0"];
+    composites [label="组合模式\ncomposites/" fillcolor="#0f3460" fontcolor="#e0e0e0"];
+    strategies [label="执行策略\nA/B/C/D" fillcolor="#0f3460" fontcolor="#e0e0e0"];
+
+    decompose -> catalog [color="#00a8ff" style=dashed];
+    decompose -> composites [color="#00a8ff" style=dashed];
+    decompose -> strategies [color="#00a8ff" style=dashed];
+  }
+
+  subgraph cluster_1 {
+    label="容器 (Container)";
+    style=filled;
+    fillcolor="#1b2a3a";
+    fontcolor="#e0e0e0";
+    color="#0f3460";
+
+    taskdir [label="tasks/<ts>.<name>/" fillcolor="#1a3a5c" fontcolor="#e0e0e0"];
+    taskmd [label="TASK.md\n(checklist + BREAK)" fillcolor="#1a3a5c" fontcolor="#e0e0e0"];
+    readme [label="README.md\n(goal + summary)" fillcolor="#1a3a5c" fontcolor="#e0e0e0"];
+    logs [label="logs/\n(output + error)" fillcolor="#1a3a5c" fontcolor="#e0e0e0"];
+    docs [label="docs/\n(research findings)" fillcolor="#1a3a5c" fontcolor="#e0e0e0"];
+    inbox [label="inbox/ + declined/\n(proposal lifecycle)" fillcolor="#1a3a5c" fontcolor="#e0e0e0"];
+
+    taskdir -> taskmd [color="#00a8ff"];
+    taskdir -> readme [color="#00a8ff"];
+    taskdir -> logs [color="#00a8ff"];
+    taskdir -> docs [color="#00a8ff"];
+  }
+
+  subgraph cluster_2 {
+    label="工具 (Tooling)";
+    style=filled;
+    fillcolor="#1e2a3a";
+    fontcolor="#e0e0e0";
+    color="#0f3460";
+
+    runner [label="task-runner.sh\n(日志封装)" fillcolor="#2a4a7c" fontcolor="#e0e0e0"];
+    pdfconv [label="convert_md_to_pdf.py\n(文档生成)" fillcolor="#2a4a7c" fontcolor="#e0e0e0"];
+    taskmd_tpl [label="templates/TASK.md\n(模板)" fillcolor="#2a4a7c" fontcolor="#e0e0e0"];
+  }
+
+  # Cross-layer connections
+  strategies -> taskdir [label="创建" color="#e0a800" style=dashed];
+  catalog -> taskmd [label="填入 checklist" color="#e0a800" style=dashed];
+  taskmd -> runner [label="执行" color="#e0a800" style=dashed];
+  docs -> pdfconv [label="导出 PDF" color="#e0a800" style=dashed];
+}
