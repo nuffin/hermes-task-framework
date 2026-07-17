@@ -620,6 +620,15 @@ Create a new task with timestamped directory. **After creation, show the user th
    有则委托其创建 TASK.md 和其他模板文件（skill 自己决定要生成什么）。
    没有则使用 task-framework 的默认 TASK.md 模板。
 
+   **`extra_references_dir` 合并：** 如果 `--skill` 的 SKILL.md frontmatter 中声明了 `extra_references_dir`，将目录下所有文件复制到新任务目录：
+
+   ```yaml
+   # SKILL.md frontmatter
+   extra_references_dir: "references/task-template/"
+   ```
+
+   复制规则：不覆盖已存在的同名文件（TASK.md 等由 create_task.py 先写）。
+
 6. **Venv 管理（按需创建）：**
    遍历 `--skill` 涉及的 skills（或 TASK.md `## Skills` 中列出的），如果任意 skill 有 `scripts/` 目录（含代码），执行：
 
