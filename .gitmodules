@@ -1,0 +1,6 @@
+[submodule "skills-source"]
+	path = skills-source
+	url = git@github.com:nuffin/task-framework.git
+[submodule "task-framework"]
+	path = task-framework
+	url = git@github.com:nuffin/task-framework.git
