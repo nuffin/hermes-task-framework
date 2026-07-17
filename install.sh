@@ -13,7 +13,7 @@ mkdir -p "$SKILLS_DIR"
 for skill in task-framework task-tracker task-timestamp-convention \
              task-lifecycle-edge-cases task-lifecycle-portability \
              task-external-repos-pattern; do
-  src="$SCRIPT_DIR/skill/$skill"
+  src="$SCRIPT_DIR/skills/$skill"
   dst="$SKILLS_DIR/$skill"
   [ ! -d "$src" ] && { echo "  ✗ Source not found: $src"; continue; }
 
