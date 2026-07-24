@@ -1291,6 +1291,15 @@ def check_cycles(meta, tasks_root):
 
 不需要翻整段对话历史来找上下文。
 
+### Nested Tasks（子任务）
+
+当主任务拆分为多个子任务时，**每个子任务也必须遵守完整的任务规则**：
+
+- 每个子任务目录下必须创建 `TASK_MEMORY.md`
+- 记录根因、修复方案、验证状态
+- 遵循相同的 task-framework 生命周期（创建 → 执行 → TASK_MEMORY 日志 → 完成）
+- 子任务的 TASK_MEMORY.md 格式与主任务一致（日期标题 + 操作/发现/决策/下一步）
+
 ### 主动创建触发信号
 
 TASK_MEMORY.md 不仅属于 `task_create` 创建的任务。当会话从简单询问演化为复杂工作时，应当**主动创建 task 目录和 TASK_MEMORY.md**。
