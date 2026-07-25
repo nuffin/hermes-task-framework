@@ -76,7 +76,7 @@ cat $HERMES_TASKS_ROOT/README.md
 
 | Role | Repo | PyPI |
 |------|------|------|
-| Skill code (this repo) | [task-framework](https://github.com/nuffin/task-framework) | — |
+| Skill code (this repo) | [hermes-task-framework](https://github.com/nuffin/hermes-task-framework) | — |
 | Pip wrapper | [hermes-task-framework-pip](https://github.com/nuffin/hermes-task-framework-pip) | [hermes-task-framework](https://pypi.org/project/hermes-task-framework/) |
 
 ## Related
