@@ -1,13 +1,26 @@
 ---
-name: task-framework
+author: Hauzer S. Lee
+category: software-development
 description: 'Three-layer task system: (1) methodology — decompose complex work into
   composable operations (info-search, code-write, paper-reproduce…) and composite
   patterns (software-dev, research); (2) container — structured tasks/ directory with
   TASK.md, logs, docs; (3) tooling — reusable scripts for logging, PDF conversion,
   and task execution.'
-author: Hauzer S. Lee
 license: MIT
-category: software-development
+metadata:
+  hermes:
+    scenes:
+    - hermes
+    - common
+    tags:
+    - task-framework
+    - methodology
+    - task-management
+    - software-development
+    - tooling
+    - logging
+    - pdf
+name: task-framework
 platforms:
 - linux
 - macos
@@ -21,13 +34,6 @@ tags:
 - logging
 - pdf
 version: 1.0.0
-metadata:
-  hermes:
-    tags:
-    - docker
-    - container
-    - logging
-    - software-development
 ---
 
 ---
@@ -136,7 +142,8 @@ The canonical tasks root is defined by `$HERMES_TASKS_ROOT` (default: `~/studio/
 
 🔴 **Semantic disambiguation (important):** When the user says "任务" or "task", first determine whether they mean (a) a task-framework managed task (in `tasks/YY.../` directories) or (b) a generic concept. Clues: specific name/timestamp, operating on a task directory → (a); abstract discussion → (b). For (a), always use task-framework tools (task_create, task_set_status, etc.) — never raw `mv`/`cp`/`rm` on task directories. For (b), handle as normal conversation.
 
-```\ntasks/\n├── README.md                  ← summary index (directory façade)\n├── TASKS.md                   ← aggregated checklist view (done/total per task)\n├── YYYYMMDD-HHMMSS.<task-name>-<hash6>/\n│   ├── README.md              ← goal, scope, key findings\n│   ├── TASK.md                ← checklist with status + checkboxes\n│   ├── TASK_MEMORY.md          ← per-task memory: auto-appended log of decisions, state, findings\n│   ├── input/                 ← **source files** — NEVER deleted by cleanup operations\n│   │                           (PDF, DOCX, images, REQUIREMENTS.md copied from inbox)\n│   ├── output/                ← **generated files** — CAN be safely deleted entirely\n│   │   ├── docs/              ← analysis documents, reports (for analysis tasks)\n│   │   ├── logs/              ← execution logs\n│   │   ├── tts-<hash6>/       ← pipeline phase dirs (for pipeline tasks)\n│   │   ├── RECORDING.md       ← pipeline generated specs\n│   │   ├── COMPOSITING.md\n│   │   └── ...\n│   ├── inbox/                 ← proposal inbox (one file/dir per idea)\n│   └── declined/              ← rejected proposals (with DECLINED.md)\n```
+```\ntasks/\n├── README.md                  ← summary index (directory façade)\n├── TASKS.md                   ← aggregated checklist view (done/total per task)\n├── YYYYMMDD-HHMMSS.<task-name>-<hash6>/\n│   ├── README.md              ← goal, scope, key findings\n│   ├── TASK.md                ← checklist with status + checkboxes\n│   ├── TASK_MEMORY.md          ← per-task memory: auto-appended log of decisions, state, findings\n│   ├── MEMORY.md               ← optional: compact §-delimited durable facts (ports, rules, constraints). See compact-directory-memory skill.
+│   ├── input/                 ← **source files** — NEVER deleted by cleanup operations\n│   │                           (PDF, DOCX, images, REQUIREMENTS.md copied from inbox)\n│   ├── output/                ← **generated files** — CAN be safely deleted entirely\n│   │   ├── docs/              ← analysis documents, reports (for analysis tasks)\n│   │   ├── logs/              ← execution logs\n│   │   ├── tts-<hash6>/       ← pipeline phase dirs (for pipeline tasks)\n│   │   ├── RECORDING.md       ← pipeline generated specs\n│   │   ├── COMPOSITING.md\n│   │   └── ...\n│   ├── inbox/                 ← proposal inbox (one file/dir per idea)\n│   └── declined/              ← rejected proposals (with DECLINED.md)\n```
 
 **`input/` 目录** — 存放从 inbox 复制来的源文件（PDF、DOCX、图片、REQUIREMENTS.md 等）。**核心规则：所有删除操作不得触及 `input/`。**
 
@@ -1227,6 +1234,7 @@ def check_cycles(meta, tasks_root):
 |------|------|------|---------|
 | `TASK.md` | checklist、状态、要求 | 创建时填充 | 手动维护 |
 | `TASK_MEMORY.md` | 操作记录、决策、发现、阻塞原因 | 自动追加 | 按时间追加，永不删除 |
+| `MEMORY.md` | 跨阶段的硬事实（端口、规则、公约） | 手动维护 | §-delimited, compact format; see `compact-directory-memory` skill |
 | `logs/` | 命令输出 | 自动生成 | 可清理 |
 | `.hermes-task.json` | hash、outputs、依赖 | 自动维护 | 随任务更新 |
 
