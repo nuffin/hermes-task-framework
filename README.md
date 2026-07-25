@@ -72,7 +72,13 @@ cat $HERMES_TASKS_ROOT/README.md
 |---------|---------|---------|
 | `HERMES_TASKS_ROOT` | `~/studio/hermes/tasks` | Task directory root |
 
+## Repositories
+
+| Role | Repo | PyPI |
+|------|------|------|
+| Skill code (this repo) | [task-framework](https://github.com/nuffin/task-framework) | — |
+| Pip wrapper | [hermes-task-framework-pip](https://github.com/nuffin/hermes-task-framework-pip) | [hermes-task-framework](https://pypi.org/project/hermes-task-framework/) |
+
 ## Related
 
-- [hermes-task-framework](https://github.com/nuffin/hermes-task-framework) — pip wrapper
 - [hermes-skill-graph](https://github.com/nuffin/hermes-skill-graph) — skill discovery plugin
