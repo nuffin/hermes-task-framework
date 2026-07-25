@@ -14,7 +14,7 @@ Task: `20260605-233355.health-sales-demo-5d5a1a` — 主动健康销售管理系
 
 1. Searched filesystem — no TASK.md found in task directory
 2. Read REQUIREMENTS.md → extracted timeline, language, viewport
-3. Read TASK_MEMORY.md (was already a symlink, content preserved) → knew last state (completed)
+3. Read CHANGELOG.md (was already a symlink, content preserved) → knew last state (completed)
 4. Listed directory contents → found all phase dirs (tts-6d3e4c, compositing-6d3e4c, etc.)
 5. Read `.hermes-task.json` → outputs mapping confirmed all phases done
 6. Loaded `browser-screen-record-task` skill → got canonical phase decomposition
@@ -30,16 +30,16 @@ After recovery, the task was migrated to the new structure:
 
 ```
 tasks/<ts>.<name>-5d5a1a/
-├── TASK.md              →  ~/.hermes/personal/tasks/5d5a1a/task.md
-├── TASK_MEMORY.md       →  ~/.hermes/personal/tasks/5d5a1a/memory.md
-├── .hermes-task.json    →  ~/.hermes/personal/tasks/5d5a1a/meta.json
+├── TASK.md
+├── CHANGELOG.md
+├── .hermes-task.json
 ├── input/               ← REQUIREMENTS.md + images/
 └── output/              ← all generated files
 ```
 
 Migration commands:
 ```bash
-# Create per-hash personal dir + symlinks
+# Initialize task metadata
 python3 manage_task.py init 5d5a1a
 
 # Move user source files to input/
@@ -50,18 +50,17 @@ mkdir -p output && mv RECORDING.md COMPOSITING.md IMAGE_SLIDESHOW.md output/
 mv tts-*/ image-slideshow-*/ subtitle-gen-*/ browser-video-recording-*/ output/
 
 # Verify clean worked
-python3 pipeline.py --clean  # only removes output/, leaves input/ + symlinks
+python3 pipeline.py --clean  # only removes output/, leaves input/ + metadata files
 
 # Re-export (now clean, no output/ in archive)
 python3 manage_task.py export 5d5a1a
-# → tar.gz contains: input/ + personal-tasks/5d5a1a/ only
+# → tar.gz contains: input/ + metadata files only
 ```
 
 ## Lessons
 
 - When you discover TASK.md is missing: regenerate IMMEDIATELY, don't defer
 - Always verify recovered TASK.md against the governing skill's phase template
-- Symlink for TASK.md + .hermes-task.json prevents permanent loss from cleanup
+- Files live directly in the task directory — no symlinks, no mirror storage
 - Pipeline cleanup MUST use output/ boundary, never exclusion-based deletion
-- For tasks with a hash, `manage_task.py relink <hash>` is the fastest recovery path
-- `manage_task.py init <hash>` creates all three symlinks in one command
+- `manage_task.py init <hash>` creates TASK.md + CHANGELOG.md + .hermes-task.json

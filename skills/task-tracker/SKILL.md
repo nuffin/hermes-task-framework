@@ -1,6 +1,6 @@
 ---
 name: task-tracker
-description: "任务跟踪回写 — 更新 TASK.md checkbox、追加 TASK_MEMORY.md、刷新索引。接收通用参数，隐藏 task-framework 内部约定"
+description: "任务跟踪回写 — 更新 TASK.md checkbox、追加 CHANGELOG.md、刷新索引。接收通用参数，隐藏 task-framework 内部约定"
 version: 1.0.0
 author: Hermes Agent
 license: MIT
@@ -12,7 +12,7 @@ tags: [task, tracking, task-framework, checklist, memory]
 
 ## 定位
 
-`task-tracker` 是任务层的 bookkeeping skill。它知道 task-framework 的内部约定（TASK.md checkbox 格式、TASK_MEMORY.md 追加格式、索引更新），对外暴露简单的参数接口。
+`task-tracker` 是任务层的 bookkeeping skill。它知道 task-framework 的内部约定（TASK.md checkbox 格式、CHANGELOG.md 追加格式、索引更新），对外暴露简单的参数接口。
 
 角色不需要知道 task-framework 的任何细节——它们只需要加载 `task-tracker` 并传入参数。
 
@@ -31,7 +31,7 @@ tags: [task, tracking, task-framework, checklist, memory]
 
 1. 读取 `TASK.md`
 2. 找到包含 `<phase>` 文本的 `- [ ]` 行，改为 `- [x]`
-3. 在 `TASK_MEMORY.md` 末尾追加记录：
+3. 在 `CHANGELOG.md` 末尾追加记录：
 
 ```markdown
 ## <phase> — <executor>
@@ -68,7 +68,7 @@ tags: [task, tracking, task-framework, checklist, memory]
 
 `task-tracker` 封装了 task-framework 的以下操作：
 - TASK.md checkbox 格式（`- [ ]` → `- [x]`）
-- TASK_MEMORY.md 追加格式
+- CHANGELOG.md 追加格式
 - update-index.py 调用
 
 task-framework 不需要知道 `task-tracker` 的存在——它只提供 task 容器。`task-tracker` 是独立工具，消费 task-framework 的产出格式。

@@ -2,7 +2,7 @@
 
 ## Problem
 
-Pipeline cleanup using exclusion-based deletion (`find ... -not -name X -exec rm`) or positive-listing always either misses cleanup targets or accidentally deletes user files. Task-framework metadata files (TASK.md, TASK_MEMORY.md, .hermes-task.json) mixed with pipeline artifacts in the same directory — cleanup couldn't distinguish them.
+Pipeline cleanup using exclusion-based deletion (`find ... -not -name X -exec rm`) or positive-listing always either misses cleanup targets or accidentally deletes user files. Task-framework metadata files (TASK.md, CHANGELOG.md, .hermes-task.json) mixed with pipeline artifacts in the same directory — cleanup couldn't distinguish them.
 
 ## Solution
 
@@ -12,9 +12,9 @@ All generated artifacts go into `output/` subdirectory; `input/` holds user sour
 
 ```
 tasks/<ts>.<name>-<hash6>/
-├── TASK.md             → symlink to ~/.hermes/personal/tasks/<hash>/task.md
-├── TASK_MEMORY.md      → symlink
-├── .hermes-task.json   → symlink
+├── TASK.md
+├── CHANGELOG.md
+├── .hermes-task.json
 ├── input/
 │   ├── REQUIREMENTS.md
 │   └── images/
@@ -37,9 +37,9 @@ rm -rf output/ + reset checkboxes
 
 Both entry points clean `output/` uniformly, never conflicting.
 
-### Symlink protection
+### File protection
 
-Three core files all symlinked to `~/.hermes/personal/tasks/<hash>/`. A `rm -rf` of the entire task directory only removes symlinks — actual data is preserved.
+Three core files (TASK.md, CHANGELOG.md, .hermes-task.json) live directly in the task directory. The task directory is the single source of truth — no mirror directories, no symlinks. A `rm -rf` of the entire task directory removes all task files irreversibly.
 
 ### Manage tool
 
@@ -52,4 +52,4 @@ Three core files all symlinked to `~/.hermes/personal/tasks/<hash>/`. A `rm -rf`
 | `import <file>` | Restore from tar.gz |
 | `rebuild <hash>` | Find hash tar.gz and import |
 | `relink <hash>` | Rebuild symlinks |
-| `reindex` | Rebuild ~/.hermes/personal/tasks/index.md |
+| `reindex` | Rebuild tasks index |

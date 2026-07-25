@@ -25,7 +25,7 @@ When a task directory exists but `TASK.md` is missing (deleted, never created, o
 | Source | What it tells you |
 |--------|------------------|
 | `.hermes-task.json` | hash, name, outputs, dependencies |
-| `TASK_MEMORY.md` | last session's state, what was done, what broke, what's next |
+| `CHANGELOG.md` | last session's state, what was done, what broke, what's next |
 | `input/REQUIREMENTS.md` | original task spec |
 | `output/` | all generated files |
 | `.hermes-task.json` → `outputs` | what was produced and where |
@@ -39,7 +39,7 @@ When a task directory exists but `TASK.md` is missing (deleted, never created, o
 2. Load the relevant skill that defines this task type:
    - Video production → `browser-screen-record-task`
    - Document analysis → `task-framework`'s `references/task-types/`
-   - Other → the skill used to create the task (check `.hermes-task.json` or TASK_MEMORY.md)
+   - Other → the skill used to create the task (check `.hermes-task.json` or CHANGELOG.md)
 3. Read the skill's phase/流程/Checklist structure carefully before writing
 
 ### Step 3: Map evidence to skill's phase structure
@@ -47,7 +47,7 @@ When a task directory exists but `TASK.md` is missing (deleted, never created, o
 Cross-reference:
 - Phase directories in `output/` → confirm each matches a skill-defined phase
 - Outputs in `.hermes-task.json` → map each to the right phase's product (note: paths may be `output/...` prefixed for post-migration tasks)
-- TASK_MEMORY.md execution notes → confirm sequence matches skill's defined order
+- CHANGELOG.md execution notes → confirm sequence matches skill's defined order
 - Parallel deps → check `和 X 同步进行` annotations match skill's flow table
 
 ### Step 4: Write TASK.md

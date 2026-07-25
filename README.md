@@ -8,7 +8,7 @@ trackable task directories — cross-session, cross-profile, cross-machine.
 | Layer | What | Examples |
 |-------|------|----------|
 | **Methodology** | How to decompose complex work | Operation catalog (`info-search`, `code-write`…), composite patterns (`software-dev`, `research`) |
-| **Container** | Physical task directory structure | `tasks/<ts>.<name>-<hash6>/` with `TASK.md`, `TASK_MEMORY.md`, `input/`, `output/` |
+| **Container** | Physical task directory structure | `tasks/<ts>.<name>-<hash6>/` with `TASK.md`, `CHANGELOG.md`, `input/`, `output/` |
 | **Tooling** | Reusable scripts | `manage_task.py` (lifecycle), `update-index.py` (index), `task-runner.sh` (logging) |
 
 ## Skills
@@ -16,7 +16,7 @@ trackable task directories — cross-session, cross-profile, cross-machine.
 | Skill | Description |
 |-------|-------------|
 | `task-framework` | Core: methodology, container, tooling — 50+ files including scripts, templates, references |
-| `task-tracker` | Bookkeeping: TASK.md checkbox updates, TASK_MEMORY.md append, index refresh |
+| `task-tracker` | Bookkeeping: TASK.md checkbox updates, CHANGELOG.md append, index refresh |
 | `task-timestamp-convention` | Naming conventions: local-time timestamps, self-explanatory names |
 | `task-lifecycle-edge-cases` | Recovery: TASK.md resurrection from artifacts |
 | `task-lifecycle-portability` | Export/import/migration between machines via tar.gz |

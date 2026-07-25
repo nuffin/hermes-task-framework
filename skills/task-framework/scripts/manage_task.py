@@ -3,7 +3,7 @@
 task-framework 任务生命周期管理工具
 
 管理 ~/studio/hermes/tasks/ 下的任务文件（默认，可通过 config.yaml 配置）。
-不再使用 ~/.hermes/personal/tasks/ 镜像目录——所有文件直接存放在任务目录下。
+不再使用镜像目录——所有文件直接存放在任务目录下。
 
 配置优先级（同 token-consumption-tracker 模式）：
   1. HERMES_TASKS_DIR 环境变量
@@ -12,13 +12,13 @@ task-framework 任务生命周期管理工具
   4. Fallback: ~/studio/hermes/tasks
 
 Commands:
-    init      为任务创建目录 + TASK.md + TASK_MEMORY.md + .hermes-task.json
+    init      为任务创建目录 + TASK.md + CHANGELOG.md + .hermes-task.json
     export    将任务打包为可移植 tar.gz
     import    从 tar.gz 恢复任务
     rebuild   按 hash 查找最近 tar.gz 并导入
     reindex   重建 index.md
     list      列出所有任务状态
-    migrate   一次性迁移：将 ~/.hermes/personal/tasks/ 下的文件迁移到统一目录
+    migrate   一次性迁移：将旧存储目录下的文件迁移到统一目录
     ensure-all 全量注册所有现有任务
 """
 import os, sys, glob, json, shutil, re, tarfile, tempfile, hashlib, random, argparse
@@ -153,7 +153,7 @@ def _ensure_task_files(task_dir, h):
     os.makedirs(task_dir, exist_ok=True)
 
     task_f = os.path.join(task_dir, "TASK.md")
-    mem_f = os.path.join(task_dir, "TASK_MEMORY.md")
+    mem_f = os.path.join(task_dir, "CHANGELOG.md")
     meta_f = os.path.join(task_dir, ".hermes-task.json")
 
     if not os.path.exists(task_f):
@@ -163,7 +163,7 @@ def _ensure_task_files(task_dir, h):
 
     if not os.path.exists(mem_f):
         with open(mem_f, 'w') as f:
-            f.write(f"# TASK_MEMORY.md -- {h}\n\n")
+            f.write(f"# CHANGELOG.md -- {h}\n\n")
         print(f"  Created: {mem_f}")
 
     if not os.path.exists(meta_f):
@@ -339,7 +339,7 @@ def cmd_reindex():
             if m:
                 status = m.group(1)
         task_ok = "Y" if os.path.exists(os.path.join(d, "TASK.md")) else "N"
-        mem_ok = "Y" if os.path.exists(os.path.join(d, "TASK_MEMORY.md")) else "N"
+        mem_ok = "Y" if os.path.exists(os.path.join(d, "CHANGELOG.md")) else "N"
         meta_ok = "Y" if os.path.exists(os.path.join(d, ".hermes-task.json")) else "N"
         lines.append(f"| {ts} | {task_name} | {h or '?'} | {status} | {task_ok} | {mem_ok} | {meta_ok} |")
 
@@ -359,7 +359,7 @@ def cmd_list():
 
 
 def cmd_migrate():
-    """One-shot migration: copy files from ~/.hermes/personal/tasks/<hash>/ to task dir."""
+    """One-shot migration: copy files from old personal storage to task dir."""
     old_root = os.path.expanduser("~/.hermes/personal/tasks")
     if not os.path.isdir(old_root):
         print("No old personal/tasks directory to migrate from.")
@@ -380,7 +380,7 @@ def cmd_migrate():
         # Copy files from old mirror to task dir, if task dir doesn't already have them
         for old_name, new_name in [
             ("task.md", "TASK.md"),
-            ("memory.md", "TASK_MEMORY.md"),
+            ("memory.md", "CHANGELOG.md"),
             ("meta.json", ".hermes-task.json"),
         ]:
             src = os.path.join(hd, old_name)

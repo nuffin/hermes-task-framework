@@ -4,7 +4,7 @@
 
 - feat: hash-based task_view — search by hash, name glob fallback (92b838d)
 - feat: scripts layout — task-runner.sh, task_ref.py with ref: resolution + cycle detection (92b838d)
-- feat: TASK_MEMORY.md template — per-task memory with append-only log format (92b838d, 435f85d)
+- feat: CHANGELOG.md template — per-task memory with append-only log format (92b838d, 435f85d)
 - fix: browser-screen-record-task scripts/ path alignment (927124f)
 - feat: venv management — auto uv venv + pip install per task (927124f)
 

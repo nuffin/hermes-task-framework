@@ -28,7 +28,7 @@ Existing pipeline tasks were migrated manually:
 1. Created `input/` + `output/` dirs
 2. Moved REQUIREMENTS.md + images/ into `input/`
 3. Moved all generated specs and phase dirs into `output/`
-4. TASK.md, TASK_MEMORY.md, .hermes-task.json converted to symlinks
+4. TASK.md, CHANGELOG.md, .hermes-task.json converted to symlinks
 
 ## TTS cache location
 

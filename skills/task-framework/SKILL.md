@@ -142,7 +142,7 @@ The canonical tasks root is defined by `$HERMES_TASKS_ROOT` (default: `~/studio/
 
 🔴 **Semantic disambiguation (important):** When the user says "任务" or "task", first determine whether they mean (a) a task-framework managed task (in `tasks/YY.../` directories) or (b) a generic concept. Clues: specific name/timestamp, operating on a task directory → (a); abstract discussion → (b). For (a), always use task-framework tools (task_create, task_set_status, etc.) — never raw `mv`/`cp`/`rm` on task directories. For (b), handle as normal conversation.
 
-```\ntasks/\n├── README.md                  ← summary index (directory façade)\n├── TASKS.md                   ← aggregated checklist view (done/total per task)\n├── YYYYMMDD-HHMMSS.<task-name>-<hash6>/\n│   ├── README.md              ← goal, scope, key findings\n│   ├── TASK.md                ← checklist with status + checkboxes\n│   ├── TASK_MEMORY.md          ← per-task memory: auto-appended log of decisions, state, findings\n│   ├── MEMORY.md               ← optional: compact §-delimited durable facts (ports, rules, constraints). See compact-directory-memory skill.
+```\ntasks/\n├── README.md                  ← summary index (directory façade)\n├── TASKS.md                   ← aggregated checklist view (done/total per task)\n├── YYYYMMDD-HHMMSS.<task-name>-<hash6>/\n│   ├── README.md              ← goal, scope, key findings\n│   ├── TASK.md                ← checklist with status + checkboxes\n│   ├── CHANGELOG.md          ← per-task changelog: auto-appended log of decisions, state, findings\n│   ├── MEMORY.md               ← optional: compact §-delimited durable facts (ports, rules, constraints). See compact-directory-memory skill.
 │   ├── input/                 ← **source files** — NEVER deleted by cleanup operations\n│   │                           (PDF, DOCX, images, REQUIREMENTS.md copied from inbox)\n│   ├── output/                ← **generated files** — CAN be safely deleted entirely\n│   │   ├── docs/              ← analysis documents, reports (for analysis tasks)\n│   │   ├── logs/              ← execution logs\n│   │   ├── tts-<hash6>/       ← pipeline phase dirs (for pipeline tasks)\n│   │   ├── RECORDING.md       ← pipeline generated specs\n│   │   ├── COMPOSITING.md\n│   │   └── ...\n│   ├── inbox/                 ← proposal inbox (one file/dir per idea)\n│   └── declined/              ← rejected proposals (with DECLINED.md)\n```
 
 **`input/` 目录** — 存放从 inbox 复制来的源文件（PDF、DOCX、图片、REQUIREMENTS.md 等）。**核心规则：所有删除操作不得触及 `input/`。**
@@ -801,7 +801,7 @@ Inbox items can be:
    for f in "$HERMES_TASKS_ROOT/$new_name"/*; do
      name=$(basename "$f")
      case "$name" in
-       TASK.md|README.md|TASK_MEMORY.md|.hermes-task.json|input|output|logs|scripts|docs) ;;
+       TASK.md|README.md|CHANGELOG.md|.hermes-task.json|input|output|logs|scripts|docs) ;;
        *) mv "$f" "$HERMES_TASKS_ROOT/$new_name/input/" 2>/dev/null || true ;;
      esac
    done
@@ -936,7 +936,7 @@ The entry point (`run.sh` or `main.py`) should be the only file referenced from 
 ### 命令
 
 ```bash
-# 初始化一个任务（创建目录 + TASK.md + TASK_MEMORY.md + .hermes-task.json）
+# 初始化一个任务（创建目录 + TASK.md + CHANGELOG.md + .hermes-task.json）
 python3 scripts/manage_task.py init 5d5a1a
 python3 scripts/manage_task.py init tasks/20260605-233355.health-sales-demo-5d5a1a/
 
@@ -949,7 +949,7 @@ python3 scripts/manage_task.py import tasks/20260605-233355.health-sales-demo-5d
 # 按 hash 重建（查找最近 tar.gz）
 python3 scripts/manage_task.py rebuild 5d5a1a
 
-# 一次性迁移：将旧 ~/.hermes/personal/tasks/ 文件迁移到统一目录
+# 一次性迁移：将旧个人存储目录下的文件迁移到统一目录
 python3 scripts/manage_task.py migrate
 
 # 全量注册所有现有任务
@@ -966,7 +966,7 @@ python3 scripts/manage_task.py list
 
 ```
 <ts>.<name>-<hash6>.tar.gz
-└── <ts>.<name>-<hash6>/          ← 任务目录（含 input/ + output/ + TASK.md + TASK_MEMORY.md + .hermes-task.json）
+└── <ts>.<name>-<hash6>/          ← 任务目录（含 input/ + output/ + TASK.md + CHANGELOG.md + .hermes-task.json）
 ```
 
 ### 跨机器迁移流程
@@ -1000,7 +1000,7 @@ task-framework/
 ├── templates/
 │   ├── TASK.md                     ← 任务模板
 │   ├── run.py                      ← 自动化执行模板
-│   └── TASK_MEMORY.md              ← per-task memory 模板
+│   └── CHANGELOG.md              ← per-task changelog 模板
 └── references/
     ├── task-hash-naming.md         ← hash 命名规则
     ├── task-format-validation.md
@@ -1033,7 +1033,7 @@ When TASK.md includes a `## Tracking` section, orchestrators (stratis/corvan/val
 inject tracking instructions into each dispatched card. The executor loads
 `task-tracker` skill after each phase to:
 - Mark the phase checkbox `[x]` in TASK.md
-- Append a structured entry to TASK_MEMORY.md
+- Append a structured entry to CHANGELOG.md
 - Run `update-index.py`
 
 See `skills/task-tracker/SKILL.md` for the parameter interface.
@@ -1224,16 +1224,16 @@ def check_cycles(meta, tasks_root):
     return True
 ```
 
-## Task Memory (TASK_MEMORY.md)
+## Task Changelog (CHANGELOG.md)
 
-每个任务目录下有一个 `TASK_MEMORY.md`，用于在跨 session 操作同一任务时保持上下文连贯性。
+每个任务目录下有一个 `CHANGELOG.md`，用于在跨 session 操作同一任务时保持上下文连贯性。
 
 ### 定位
 
 | 文件 | 用途 | 谁写 | 生命周期 |
 |------|------|------|---------|
 | `TASK.md` | checklist、状态、要求 | 创建时填充 | 手动维护 |
-| `TASK_MEMORY.md` | 操作记录、决策、发现、阻塞原因 | 自动追加 | 按时间追加，永不删除 |
+| `CHANGELOG.md` | 操作记录、决策、发现、阻塞原因 | 自动追加 | 按时间追加，永不删除 |
 | `MEMORY.md` | 跨阶段的硬事实（端口、规则、公约） | 手动维护 | §-delimited, compact format; see `compact-directory-memory` skill |
 | `logs/` | 命令输出 | 自动生成 | 可清理 |
 | `.hermes-task.json` | hash、outputs、依赖 | 自动维护 | 随任务更新 |
@@ -1242,13 +1242,13 @@ def check_cycles(meta, tasks_root):
 
 **每次操作任何 task 之前：**
 
-1. 检查该 task 目录下是否存在 `TASK_MEMORY.md`
+1. 检查该 task 目录下是否存在 `CHANGELOG.md`
 2. 如果存在 → 读到最后 50 行，了解最近的上下文（做了什么、卡在哪、有什么发现）
-3. 如果不存在 → 从 `templates/TASK_MEMORY.md` 复制模板后写入第一条记录
+3. 如果不存在 → 从 `templates/CHANGELOG.md` 复制模板后写入第一条记录
 
 **每次操作之后（特别是跨 session 时）：**
 
-在 `TASK_MEMORY.md` 末尾追加一条新记录。
+在 `CHANGELOG.md` 末尾追加一条新记录。
 
 ### 记录格式
 
@@ -1287,11 +1287,12 @@ def check_cycles(meta, tasks_root):
 
 ### `task_reset` 时
 
-`task_reset --hard` **不清除** `TASK_MEMORY.md`，只清 logs/ 和 docs/。重置后追加一条"任务已重置"记录。
+`task_reset --hard` **不清除** `CHANGELOG.md`，只清 logs/ 和 docs/。重置后追加一条"任务已重置"记录。
+    注意：CHANGELOG.md 是持久化的操作日志，NOT cleared by task_reset。
 
 ### 跨 session 价值
 
-当新 session 打开这个任务时，`TASK_MEMORY.md` 让 agent 立刻知道：
+当新 session 打开这个任务时，`CHANGELOG.md` 让 agent 立刻知道：
 - 上次做到哪一步
 - 为什么停下来
 - 有什么已知问题
@@ -1303,14 +1304,14 @@ def check_cycles(meta, tasks_root):
 
 当主任务拆分为多个子任务时，**每个子任务也必须遵守完整的任务规则**：
 
-- 每个子任务目录下必须创建 `TASK_MEMORY.md`
+- 每个子任务目录下必须创建 `CHANGELOG.md`
 - 记录根因、修复方案、验证状态
-- 遵循相同的 task-framework 生命周期（创建 → 执行 → TASK_MEMORY 日志 → 完成）
-- 子任务的 TASK_MEMORY.md 格式与主任务一致（日期标题 + 操作/发现/决策/下一步）
+- 遵循相同的 task-framework 生命周期（创建 → 执行 → CHANGELOG 日志 → 完成）
+- 子任务的 CHANGELOG.md 格式与主任务一致（日期标题 + 操作/发现/决策/下一步）
 
 ### 主动创建触发信号
 
-TASK_MEMORY.md 不仅属于 `task_create` 创建的任务。当会话从简单询问演化为复杂工作时，应当**主动创建 task 目录和 TASK_MEMORY.md**。
+CHANGELOG.md 不仅属于 `task_create` 创建的任务。当会话从简单询问演化为复杂工作时，应当**主动创建 task 目录和 CHANGELOG.md**。
 
 **触发信号（任一达到即触发）：**
 
@@ -1331,8 +1332,8 @@ HASH=$(python3 -c "import secrets; print(secrets.token_hex(3))")
 DIR="$HERMES_TASKS_ROOT/${TS}.<task-name>-${HASH}"
 mkdir -p "$DIR/output/docs" "$DIR/output/logs"
 
-# 2. 写入 TASK_MEMORY.md 首条记录
-cat > "$DIR/TASK_MEMORY.md" << 'EOF'
+# 2. 写入 CHANGELOG.md 首条记录
+cat > "$DIR/CHANGELOG.md" << 'EOF'
 # Task Memory — <task-name>
 
 ## YYYY-MM-DD HH:MM
@@ -1353,7 +1354,7 @@ python3 ~/.hermes/skills/software-development/task-framework/scripts/update-inde
 
 1. 扫描本轮所有操作记录（memory、终端输出、文件修改）
 2. 按时间顺序提炼关键节点
-3. 每个节点写一条 TASK_MEMORY.md 记录（操作/发现/决策/下一步）
+3. 每个节点写一条 CHANGELOG.md 记录（操作/发现/决策/下一步）
 4. 创建目录、写入、更新索引
 
 补建时不需要写满全部细节——每个决策点提炼 2-5 行即可，重点是"为什么选了这个方案"和"踩了哪些坑"。
@@ -1362,7 +1363,7 @@ python3 ~/.hermes/skills/software-development/task-framework/scripts/update-inde
 
 post-flight 的 Integrity Check 会检查"本轮的复杂程度是否达到了触发条件"，
 Pending Action Scan 会处理"达到了但没有 task 目录 → 立即补建"。
-TASK_MEMORY.md 的创建和维护是 post-flight 后置链的固定组成部分。
+CHANGELOG.md 的创建和维护是 post-flight 后置链的固定组成部分。
 
 - **`.hermes-task.json` 必须在任务根目录** — 和 TASK.md 同级
 - **任务被删除后引用断掉** — `resolve_ref` 会抛异常，上游任务要考虑重建

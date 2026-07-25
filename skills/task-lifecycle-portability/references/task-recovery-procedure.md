@@ -2,26 +2,21 @@
 
 When a task directory exists but `TASK.md` is missing (deleted, never created, or corrupted), reconstruct it from surrounding artifacts.
 
-## Step 0: Check symlink target first
+## Step 0: Check task directory for existing content
 
-If the task has hash-based naming (rightmost 6 chars = `<hash6>`), check `~/.hermes/personal/tasks/<hash>/task.md`:
+If the task has hash-based naming (rightmost 6 chars = `<hash6>`), check the task directory directly:
 
 ```bash
-ls -la ~/.hermes/personal/tasks/<hash>/task.md
-# If exists → restore with:
-python3 ~/.hermes/skills/software-development/task-framework/scripts/manage_task.py relink <hash>
+ls -la $HERMES_TASKS_ROOT/*<hash>*/TASK.md
+# If TASK.md exists but is corrupted, regenerate it from CHANGELOG.md + artifacts
 ```
-
-If the personal backup exists, symlink recovery is instant.
 
 ## Step 1: Gather evidence
 
 | Source | What it tells you |
 |--------|------------------|
-| `~/.hermes/personal/tasks/<hash>/task.md` | content backup — instant recovery via relink |
-| `~/.hermes/personal/tasks/<hash>/memory.md` | TASK_MEMORY.md content backup |
 | `.hermes-task.json` | hash, name, outputs, dependencies |
-| `TASK_MEMORY.md` | last session's state, what was done, what broke |
+| `CHANGELOG.md` | last session's state, what was done, what broke |
 | `input/REQUIREMENTS.md` | original task spec |
 | `output/` | all generated files |
 | Root index (`tasks/TASKS.md`) | aggregated status from last index run |
@@ -37,7 +32,7 @@ Scan directory for type-signature files — `REQUIREMENTS.md` + `RECORDING.md` +
 Cross-reference:
 - Phase directories in `output/` → confirm each matches a skill-defined phase
 - Outputs in `.hermes-task.json` → map each to the right phase's product
-- TASK_MEMORY.md execution notes → confirm sequence matches skill's defined order
+- CHANGELOG.md execution notes → confirm sequence matches skill's defined order
 - Parallel deps → check annotations match skill's flow table
 
 ## Step 4: Write TASK.md

@@ -12,7 +12,7 @@ Three-layer protection:
 
 1. **Directory isolation** — input/ (source) + output/ (generated) boundary. Pipeline only touches output/. Never exclusion-based deletion at task root.
 
-2. **Symlink protection** — TASK.md, TASK_MEMORY.md, .hermes-task.json all symlink to `~/.hermes/personal/tasks/<hash>/`. rm -rf task dir only breaks symlinks; actual content survives.
+2. **File protection** — TASK.md, CHANGELOG.md, .hermes-task.json all live directly in the task directory. Files are the single source of truth.
 
 3. **Tar.gz portability** — `manage.py export` creates self-contained snapshot with resolved content (no symlinks in archive), both git repos preserved. `import` restores symlinks on target machine.
 
@@ -21,8 +21,7 @@ Three-layer protection:
 - output/ excluded from tar.gz (regenerable)
 - tar.gz committed to git (storage cost accepted)
 - Cross-machine: no merge, independent tasks. Manual fusion via ref: links.
-- `~/.hermes/personal/tasks/<hash>/` git can bare-run (no upstream). Metadata tracking > remote collaboration.
-- Old tasks: migrate if feasible, abandon if not.
+- Old tasks: migrate if feasible using `manage_task.py migrate`, abandon if not.
 
 ## Manage.py Split
 

@@ -30,7 +30,7 @@ tasks/<ts>.<name>-<hash6>/
 │       └── output.20260610-152823.log
 ├── TASK.md
 ├── README.md
-├── TASK_MEMORY.md
+├── CHANGELOG.md
 └── .hermes-task.json
 ```
 
