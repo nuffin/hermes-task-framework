@@ -142,7 +142,7 @@ The canonical tasks root is defined by `$HERMES_TASKS_ROOT` (default: `~/studio/
 
 🔴 **Semantic disambiguation (important):** When the user says "任务" or "task", first determine whether they mean (a) a task-framework managed task (in `tasks/YY.../` directories) or (b) a generic concept. Clues: specific name/timestamp, operating on a task directory → (a); abstract discussion → (b). For (a), always use task-framework tools (task_create, task_set_status, etc.) — never raw `mv`/`cp`/`rm` on task directories. For (b), handle as normal conversation.
 
-```\ntasks/\n├── README.md                  ← summary index (directory façade)\n├── TASKS.md                   ← aggregated checklist view (done/total per task)\n├── YYYYMMDD-HHMMSS.<task-name>-<hash6>/\n│   ├── README.md              ← goal, scope, key findings\n│   ├── TASK.md                ← checklist with status + checkboxes\n│   ├── CHANGELOG.md          ← per-task changelog: auto-appended log of decisions, state, findings\n│   ├── MEMORY.md               ← optional: compact §-delimited durable facts (ports, rules, constraints). See compact-directory-memory skill.
+```\ntasks/\n├── README.md                  ← summary index (directory façade)\n├── TASKS.md                   ← aggregated checklist view (done/total per task)\n├── YYYYMMDD-HHMMSS.<task-name>-<hash6>/\n│   ├── README.md              ← goal, scope, key findings\n│   ├── TASK.md                ← checklist with status + checkboxes\n│   ├── CHANGELOG.md          ← per-task changelog: auto-appended log of decisions, state, findings\n│   ├── MEMORY.md               ← compact §-delimited durable facts (ports, rules, constraints). REQUIRED to maintain — see compact-directory-memory skill for format and trigger rules.
 │   ├── input/                 ← **source files** — NEVER deleted by cleanup operations\n│   │                           (PDF, DOCX, images, REQUIREMENTS.md copied from inbox)\n│   ├── output/                ← **generated files** — CAN be safely deleted entirely\n│   │   ├── docs/              ← analysis documents, reports (for analysis tasks)\n│   │   ├── logs/              ← execution logs\n│   │   ├── tts-<hash6>/       ← pipeline phase dirs (for pipeline tasks)\n│   │   ├── RECORDING.md       ← pipeline generated specs\n│   │   ├── COMPOSITING.md\n│   │   └── ...\n│   ├── inbox/                 ← proposal inbox (one file/dir per idea)\n│   └── declined/              ← rejected proposals (with DECLINED.md)\n```
 
 **`input/` 目录** — 存放从 inbox 复制来的源文件（PDF、DOCX、图片、REQUIREMENTS.md 等）。**核心规则：所有删除操作不得触及 `input/`。**
@@ -1234,7 +1234,7 @@ def check_cycles(meta, tasks_root):
 |------|------|------|---------|
 | `TASK.md` | checklist、状态、要求 | 创建时填充 | 手动维护 |
 | `CHANGELOG.md` | 操作记录、决策、发现、阻塞原因 | 自动追加 | 按时间追加，永不删除 |
-| `MEMORY.md` | 跨阶段的硬事实（端口、规则、公约） | 手动维护 | §-delimited, compact format; see `compact-directory-memory` skill |
+| `MEMORY.md` | 跨阶段的硬事实（端口、规则、公约） | 手动维护 | §-delimited, compact format; MUST use `compact-directory-memory` skill for format and trigger rules. Review after every phase completion or session that changes task state. |
 | `logs/` | 命令输出 | 自动生成 | 可清理 |
 | `.hermes-task.json` | hash、outputs、依赖 | 自动维护 | 随任务更新 |
 
@@ -1364,6 +1364,8 @@ python3 ~/.hermes/skills/software-development/task-framework/scripts/update-inde
 post-flight 的 Integrity Check 会检查"本轮的复杂程度是否达到了触发条件"，
 Pending Action Scan 会处理"达到了但没有 task 目录 → 立即补建"。
 CHANGELOG.md 的创建和维护是 post-flight 后置链的固定组成部分。
+同样，**当 `compact-directory-memory` skill 可用时，post-flight 应触发 MEMORY.md
+的审查**：检查现有事实是否过时、本 session 是否产生了需要记录的新事实。
 
 - **`.hermes-task.json` 必须在任务根目录** — 和 TASK.md 同级
 - **任务被删除后引用断掉** — `resolve_ref` 会抛异常，上游任务要考虑重建
