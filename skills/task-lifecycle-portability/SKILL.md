@@ -1,20 +1,26 @@
 ---
-name: task-lifecycle-portability
-description: Task migration, export/import, and file-protection model. Covers tar.gz
-  snapshots and manage.py lifecycle
-  commands (export/import/rebuild).
-version: 1.0.0
-category: software-development
-platforms:
-- linux
-- macos
 author: Hauzer S. Lee
+category: software-development
+description: Task migration, export/import, and file-protection model. Covers tar.gz
+  snapshots and manage.py lifecycle commands (export/import/rebuild).
 license: MIT
 metadata:
   hermes:
+    scenes:
+    - hermes
+    - devops
     tags:
-    - migration
     - software-development
+    - task-migration
+    - export-import
+    - file-protection
+    - python
+    - hermes
+name: task-lifecycle-portability
+platforms:
+- linux
+- macos
+version: 1.0.0
 ---
 
 

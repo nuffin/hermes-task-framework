@@ -1,25 +1,32 @@
 ---
-name: task-timestamp-convention
-description: "Task directory naming conventions — timestamp format (local timezone) AND name content guidelines. Name must be self-explanatory: <system/domain>-<deliverable-type> not generic terms."
-version: 1.1.0
 author: Personal Suite
-license: MIT
 category: software-development
-platforms: [linux, macos]
+description: 'Task directory naming conventions — timestamp format (local timezone)
+  AND name content guidelines. Name must be self-explanatory: <system/domain>-<deliverable-type>
+  not generic terms.'
+license: MIT
 metadata:
   hermes:
-    tags:
-      - task
-      - naming
-      - convention
-      - timestamp
-      - directory
     relations:
-      - type: used_in_workflow
-        target: task-framework
-        properties:
-          reason: "Called during every task_create"
-          strength: strong
+    - properties:
+        reason: Called during every task_create
+        strength: strong
+      target: task-framework
+      type: used_in_workflow
+    scenes:
+    - hermes
+    tags:
+    - task-management
+    - naming-convention
+    - timestamp
+    - hermes
+    - directory
+    - workflow
+name: task-timestamp-convention
+platforms:
+- linux
+- macos
+version: 1.1.0
 ---
 
 # Task Naming Conventions

@@ -1,10 +1,31 @@
 ---
-name: task-external-repos-pattern
-description: "Documentation for the repos/ directory pattern — cloning external git repos into a task for analysis, audit, or code extraction. Defines cleanup semantics, directory structure, and pitfall avoidance."
 author: Hermes Agent
-license: MIT
 category: software-development
-tags: [task, repos, git, clone, analysis, external]
+description: Documentation for the repos/ directory pattern — cloning external git
+  repos into a task for analysis, audit, or code extraction. Defines cleanup semantics,
+  directory structure, and pitfall avoidance.
+license: MIT
+metadata:
+  hermes:
+    scenes:
+    - research
+    - coding
+    tags:
+    - git
+    - repos
+    - clone
+    - analysis
+    - audit
+    - task
+    - software-development
+name: task-external-repos-pattern
+tags:
+- task
+- repos
+- git
+- clone
+- analysis
+- external
 version: 1.0.0
 ---
 

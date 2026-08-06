@@ -1,15 +1,32 @@
 ---
-name: task-lifecycle-edge-cases
-description: "Edge-case operations for task lifecycle — TASK.md recovery after loss, task resurrection from artifacts, conflict resolution when phase directories diverge from checklist."
-version: 1.0.0
 author: Hauzer S. Lee
-license: MIT
 category: software-development
-platforms: [linux, macos]
+description: Edge-case operations for task lifecycle — TASK.md recovery after loss,
+  task resurrection from artifacts, conflict resolution when phase directories diverge
+  from checklist.
+license: MIT
 metadata:
   hermes:
-    tags: ['task', 'lifecycle', 'recovery', 'edge-case']
-    related_skills: ['task-framework', 'browser-screen-record-task']
+    related_skills:
+    - task-framework
+    - browser-screen-record-task
+    scenes:
+    - writing
+    - research
+    - hermes
+    tags:
+    - task
+    - lifecycle
+    - recovery
+    - edge-case
+    - hermes
+    - task-framework
+    - software-development
+name: task-lifecycle-edge-cases
+platforms:
+- linux
+- macos
+version: 1.0.0
 ---
 
 # Task Lifecycle Edge Cases

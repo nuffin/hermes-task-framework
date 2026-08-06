@@ -1,11 +1,28 @@
 ---
-name: task-tracker
-description: "任务跟踪回写 — 更新 TASK.md checkbox、追加 CHANGELOG.md、刷新索引。接收通用参数，隐藏 task-framework 内部约定"
-version: 1.0.0
 author: Hermes Agent
-license: MIT
 category: software-development
-tags: [task, tracking, task-framework, checklist, memory]
+description: 任务跟踪回写 — 更新 TASK.md checkbox、追加 CHANGELOG.md、刷新索引。接收通用参数，隐藏 task-framework
+  内部约定
+license: MIT
+metadata:
+  hermes:
+    scenes:
+    - hermes
+    - writing
+    tags:
+    - software-development
+    - task-framework
+    - hermes
+    - tracking
+    - bookkeeping
+name: task-tracker
+tags:
+- task
+- tracking
+- task-framework
+- checklist
+- memory
+version: 1.0.0
 ---
 
 # Task Tracker
