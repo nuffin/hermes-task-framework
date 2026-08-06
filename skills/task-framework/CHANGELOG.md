@@ -1,5 +1,35 @@
 # Changelog — task-framework
 
+## 2026-08-06 (v1.1.0)
+
+### feat: manage_task.py — 6 new lifecycle commands
+- `create` — directory + hash + meta + templates + optional inbox move
+- `accept` — create task from inbox file/dir (auto-derives name)
+- `decline` — move inbox item to declined/ with DECLINED.md
+- `status` — update ## Status line + auto index update
+- `view` — print README.md + TASK.md (hash/dir/name resolution)
+- `reset` — clear output/ + reset checkboxes + set status active (--no-hard for soft reset)
+- All commands use cp+verify+rm for file moves (never raw mv)
+- All commands auto-run update-index.py after changes
+
+### fix: code quality (A1-A4, B1/B4/B6, C2/C3/C6)
+- A1: replace 4 stale ~/.hermes/skills/ hardcoded paths with relative scripts/ paths
+- A2: cmd_init .hermes-task.json schema 5→12 fields (matches cmd_create)
+- A3: unify three index systems — reindex calls update-index.py, list scans dirs directly
+- A4: task-runner.sh log path logs/ → output/logs/ (matches task_reset cleanup scope)
+- B1: hash6() uses secrets.token_hex(3) instead of md5(random) across all 3 scripts
+- B4: _safe_move_file/_safe_move_dir rollback on failure (clean dst, preserve src)
+- B6: cmd_decline uses os.path.basename() to prevent path injection
+- C2: remove stale "Skill 文件结构一览" section (listed 3 scripts, actually 5)
+- C3: add .gitignore, remove tracked __pycache__/*.pyc
+- C6: unify env var resolution — all 3 scripts share _resolve_tasks_root() (HERMES_TASKS_ROOT | HERMES_TASKS_DIR → profile config → global config → fallback)
+
+### docs: SKILL.md updates (D1-D5)
+- D1: trigger signal section uses manage_task.py create instead of ad-hoc bash
+- D3: update create_task.py reference to manage_task.py create
+- D4: Named Outputs uses task_ref.set_output() instead of inline python -c
+- D5: resolve_ref/check_cycles reference scripts/task_ref.py instead of inline code
+
 ## 2026-06-06
 
 - feat: hash-based task_view — search by hash, name glob fallback (92b838d)

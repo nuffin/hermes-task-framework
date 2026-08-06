@@ -3,8 +3,8 @@
 # Usage: task-runner.sh <task-dir> <command...>
 #
 # Creates:
-#   <task-dir>/logs/output.YYYYMMDD-HHMMSS.log
-#   <task-dir>/logs/error.YYYYMMDD-HHMMSS.log
+#   <task-dir>/output/logs/output.YYYYMMDD-HHMMSS.log
+#   <task-dir>/output/logs/error.YYYYMMDD-HHMMSS.log
 # stdout and stderr also go to terminal.
 # Exit code preserved.
 
@@ -18,11 +18,11 @@ fi
 TASK_DIR="$1"
 shift
 
-mkdir -p "$TASK_DIR/logs"
+mkdir -p "$TASK_DIR/output/logs"
 
 TIMESTAMP=$(date '+%Y%m%d-%H%M%S')
-OUTPUT_LOG="$TASK_DIR/logs/output.${TIMESTAMP}.log"
-ERROR_LOG="$TASK_DIR/logs/error.${TIMESTAMP}.log"
+OUTPUT_LOG="$TASK_DIR/output/logs/output.${TIMESTAMP}.log"
+ERROR_LOG="$TASK_DIR/output/logs/error.${TIMESTAMP}.log"
 
 # Header
 echo "-------- $(date '+%Y-%m-%d %H:%M:%S') --------" > "$OUTPUT_LOG"

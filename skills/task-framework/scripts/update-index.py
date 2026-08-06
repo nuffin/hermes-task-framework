@@ -13,7 +13,59 @@ Usage:
 
 import os, sys, re, glob
 
-TASKS_ROOT = os.path.expanduser(os.environ.get("HERMES_TASKS_ROOT", "~/studio/hermes/tasks"))
+
+# ── config resolution (shared with manage_task.py) ──
+
+def _read_config_yaml(config_path):
+    if not config_path or not os.path.exists(str(config_path)):
+        return {}
+    try:
+        import yaml
+        with open(config_path) as fh:
+            return yaml.safe_load(fh) or {}
+    except Exception:
+        return {}
+
+
+def _resolve_tasks_root() -> str:
+    """Priority chain: env → profile config → global config → fallback."""
+    # 1. Env var: HERMES_TASKS_ROOT (preferred) or HERMES_TASKS_DIR (legacy)
+    env = os.environ.get("HERMES_TASKS_ROOT", "").strip()
+    if not env:
+        env = os.environ.get("HERMES_TASKS_DIR", "").strip()
+    if env:
+        return os.path.expanduser(env)
+
+    # 2. Per-profile config
+    from pathlib import Path
+    hermes_home = os.environ.get("HERMES_HOME", "").strip()
+    if hermes_home:
+        cfg = _read_config_yaml(Path(hermes_home) / "config.yaml")
+        tasks_cfg = cfg.get("tasks", {})
+        if isinstance(tasks_cfg, dict):
+            val = tasks_cfg.get("data_dir")
+            if val and isinstance(val, str):
+                return os.path.expanduser(val)
+
+    # 3. Global config
+    global_cfg_path = Path(os.path.expanduser("~/.hermes/config.yaml"))
+    if hermes_home:
+        profile_cfg_path = (Path(hermes_home) / "config.yaml").resolve()
+    else:
+        profile_cfg_path = None
+    if profile_cfg_path is None or global_cfg_path.resolve() != profile_cfg_path.resolve():
+        cfg = _read_config_yaml(global_cfg_path)
+        tasks_cfg = cfg.get("tasks", {})
+        if isinstance(tasks_cfg, dict):
+            val = tasks_cfg.get("data_dir")
+            if val and isinstance(val, str):
+                return os.path.expanduser(val)
+
+    # 4. Fallback
+    return os.path.expanduser("~/studio/hermes/tasks")
+
+
+TASKS_ROOT = _resolve_tasks_root()
 
 def gather_tasks(tasks_root):
     """Return sorted list of (dirname, ts, name, title, status, desc, checklist, notes, related_tasks, related_tickets, cluster_info)."""
