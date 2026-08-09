@@ -1,5 +1,5 @@
 ---
-author: Personal Suite
+author: Hermes Agent
 category: software-development
 description: 'Task directory naming conventions — timestamp format (local timezone)
   AND name content guidelines. Name must be self-explanatory: <system/domain>-<deliverable-type>
@@ -59,7 +59,7 @@ The task name (after the timestamp) must describe **what system/domain** and **w
 
 | ❌ Bad (too generic) | ✅ Good (self-explanatory) |
 |---------------------|--------------------------|
-| `system-architecture-diagram` | `personal-suite-troupe-architecture` |
+| `system-architecture-diagram` | `<system-name>-architecture` |
 | `api-design` | `eir-health-data-api-design` |
 | `bug-fix` | `user-service-login-500-error-fix` |
 | `code-review` | `heart-health-backend-PR-42-review` |

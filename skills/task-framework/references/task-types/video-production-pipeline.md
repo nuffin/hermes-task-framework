@@ -2,10 +2,10 @@
 
 ## 创建
 
-1. 通过 `task_create --skill browser-screen-record-task` 创建
+1. 通过 `task_create --skill <video-skill>` 创建
 2. 创建 `tasks/<ts>.<name>-<hash6>/` 目录，含 `input/` `output/` `scripts/`
 3. 用户填写的 `REQUIREMENTS.md` 和 `images/`（封面图片）放在 `input/`
-4. `browser-screen-record-task` 的 `scripts/create_task.py` 生成初始 `TASK.md`
+4. `<video-skill>` 的 `scripts/create_task.py` 生成初始 `TASK.md`
 5. 写入 `.hermes-task.json`
 
 ## 执行
@@ -50,7 +50,7 @@ tasks/<ts>.<name>-<hash6>/
 └── .hermes-task.json
 ```
 
-> **迁移说明：** 现有 pipeline 任务（如 `health-sales-demo-5d5a1a`）可能还把 REQUIREMENTS.md 和 images/ 放在根目录。后续对此任务操作时，应迁移到 `input/` + `output/` 模型。
+> **迁移说明：** 现有 pipeline 任务（如 `<task-name>-<hash6>`）可能还把 REQUIREMENTS.md 和 images/ 放在根目录。后续对此任务操作时，应迁移到 `input/` + `output/` 模型。
 
 ## 修改
 
@@ -62,7 +62,7 @@ tasks/<ts>.<name>-<hash6>/
 ```bash
 # 方式 A（推荐）：通过 pipeline.py
 cd tasks/<ts>.<name>-<hash6>/
-python3 ~/.hermes/skills/media/video-production-pipeline/scripts/pipeline.py --clean
+python3 <skill-path>/scripts/pipeline.py --clean
 
 # 方式 B：通用清理（input/ 安全）
 rm -rf output/
@@ -74,4 +74,4 @@ rm -rf output/
 
 1. 确认 `output/compositing-<hash6>/output.mp4` 存在且可播放（ffprobe 验证）
 2. 更新 TASK.md 状态为 `completed`
-3. 运行 `python3 ~/.hermes/skills/software-development/task-framework/scripts/update-index.py` 更新索引
+3. 运行 `python3 scripts/update-index.py  # from the skill directory` 更新索引

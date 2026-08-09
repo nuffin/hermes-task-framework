@@ -18,7 +18,7 @@ import sys, os, subprocess, re
 TASK_DIR = os.path.dirname(os.path.abspath(__file__))
 TASK_MD = os.path.join(TASK_DIR, "TASK.md")
 SCRIPTS = os.path.join(TASK_DIR, "scripts")
-VENV_PY = os.path.expanduser("~/.venvs/playwright/bin/python")
+VENV_PY = os.path.join(TASK_DIR, ".venv", "bin", "python")
 PY = VENV_PY if os.path.exists(VENV_PY) else sys.executable
 
 
@@ -48,7 +48,7 @@ def phase3():
     cmd = [
         PY, "-c",
         "import sys, os; "
-        "sys.path.insert(0, os.path.expanduser('~/.hermes/personal-suite/skills/video-audio-compositing/scripts')); "
+        "sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), \"scripts\")); "
         "from utils.timeline import generate_timeline_chart; "
         "generate_timeline_chart('COMPOSITING.md', 'timeline-chart-xxxxxx/timeline_chart.txt', format='both')"
     ]

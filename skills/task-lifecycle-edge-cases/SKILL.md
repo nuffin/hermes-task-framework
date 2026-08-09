@@ -1,5 +1,5 @@
 ---
-author: Hauzer S. Lee
+author: Hermes Agent
 category: software-development
 description: Edge-case operations for task lifecycle — TASK.md recovery after loss,
   task resurrection from artifacts, conflict resolution when phase directories diverge
@@ -9,7 +9,7 @@ metadata:
   hermes:
     related_skills:
     - task-framework
-    - browser-screen-record-task
+    - <domain-skill>
     scenes:
     - writing
     - research
@@ -54,7 +54,7 @@ When a task directory exists but `TASK.md` is missing (deleted, never created, o
 
 1. Scan directory for type-signature files — `REQUIREMENTS.md` + `RECORDING.md` + `COMPOSITING.md` → video-production task
 2. Load the relevant skill that defines this task type:
-   - Video production → `browser-screen-record-task`
+   - Video production → `<domain-skill>`
    - Document analysis → `task-framework`'s `references/task-types/`
    - Other → the skill used to create the task (check `.hermes-task.json` or CHANGELOG.md)
 3. Read the skill's phase/流程/Checklist structure carefully before writing
@@ -89,7 +89,7 @@ Only mark phases `[x]` if the output artifact exists and can be verified (stat t
 ### Step 6: Update indexes
 
 ```bash
-python3 ~/.hermes/skills/software-development/task-framework/scripts/update-index.py
+python3 scripts/update-index.py  # from the skill directory
 ```
 
 ## Pitfalls

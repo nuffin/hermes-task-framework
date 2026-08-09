@@ -15,12 +15,12 @@ For research/documentation tasks, also create docs/:
 
 ```
 ts=$(date '+%Y%m%d-%H%M%S')
-mkdir -p "tasks/${ts}.kangyang-center-research/logs/"
-mkdir -p "tasks/${ts}.kangyang-center-research/docs/"
+mkdir -p "tasks/${ts}.<task-name>/logs/"
+mkdir -p "tasks/${ts}.<task-name>/docs/"
 ```
 
 Result: `tasks/20260601-164001.paper-reproduction/` (code) or
-         `tasks/20260602-041236.kangyang-center-research/` (research)
+         `tasks/20260602-041236.<task-name>/` (research)
 
 ## 2. Status — active
 
@@ -106,11 +106,11 @@ tasks/
         └── error.20260601-171200.log
 ```
 
-For a **research/documentation task** (康养中心调研):
+For a **research/documentation task** (<task-name>):
 
 ```
 tasks/
-└── 20260602-041236.kangyang-center-research/
+└── 20260602-041236.<task-name>/
     ├── README.md              ← overview + key findings summary
     ├── TASK.md                ← checklist (Phase 1-5)
     ├── docs/                  ← organized markdown research materials

@@ -29,4 +29,4 @@ Phases without an implementation should return `True` (skip, don't fail) so the 
 
 ## Venv
 
-Use `~/.venvs/playwright/bin/python` if available (has playwright, edge-tts, matplotlib, Pillow).
+Use the task's `.venv` if available (e.g. playwright, edge-tts, matplotlib, Pillow).

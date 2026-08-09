@@ -1,6 +1,6 @@
-# Health Sales Demo (5d5a1a) Recovery
+# Task Recovery: <task-name> (<hash6>)
 
-Task: `20260605-233355.health-sales-demo-5d5a1a` — 主动健康销售管理系统演示视频
+Task: `<ts>.<task-name>-<hash6>`
 
 ## How TASK.md was lost (historical)
 
@@ -17,7 +17,7 @@ Task: `20260605-233355.health-sales-demo-5d5a1a` — 主动健康销售管理系
 3. Read CHANGELOG.md (was already a symlink, content preserved) → knew last state (completed)
 4. Listed directory contents → found all phase dirs (tts-6d3e4c, compositing-6d3e4c, etc.)
 5. Read `.hermes-task.json` → outputs mapping confirmed all phases done
-6. Loaded `browser-screen-record-task` skill → got canonical phase decomposition
+6. Loaded `<domain-skill>` skill → got canonical phase decomposition
 7. Compared first draft against skill's template:
    - Missing Phase 2 (timeline-composer)
    - Wrong phase order (TTS→record→cover→subtitle instead of parallel)
@@ -29,7 +29,7 @@ Task: `20260605-233355.health-sales-demo-5d5a1a` — 主动健康销售管理系
 After recovery, the task was migrated to the new structure:
 
 ```
-tasks/<ts>.<name>-5d5a1a/
+tasks/<ts>.<name>-<hash6>/
 ├── TASK.md
 ├── CHANGELOG.md
 ├── .hermes-task.json
@@ -40,7 +40,7 @@ tasks/<ts>.<name>-5d5a1a/
 Migration commands:
 ```bash
 # Initialize task metadata
-python3 manage_task.py init 5d5a1a
+python3 manage_task.py init <hash6>
 
 # Move user source files to input/
 mkdir -p input && mv REQUIREMENTS.md input/ && mv images/ input/
@@ -53,7 +53,7 @@ mv tts-*/ image-slideshow-*/ subtitle-gen-*/ browser-video-recording-*/ output/
 python3 pipeline.py --clean  # only removes output/, leaves input/ + metadata files
 
 # Re-export (now clean, no output/ in archive)
-python3 manage_task.py export 5d5a1a
+python3 manage_task.py export <hash6>
 # → tar.gz contains: input/ + metadata files only
 ```
 

@@ -2,14 +2,14 @@
 """
 task-framework 任务生命周期管理工具
 
-管理 ~/studio/hermes/tasks/ 下的任务文件（默认，可通过 config.yaml 配置）。
+管理 $HERMES_TASKS_ROOT 下的任务文件（默认，可通过 config.yaml 配置）。
 不再使用镜像目录——所有文件直接存放在任务目录下。
 
-配置优先级（同 token-consumption-tracker 模式）：
+配置优先级：
   1. HERMES_TASKS_ROOT 或 HERMES_TASKS_DIR 环境变量
   2. 当前 profile config.yaml: tasks.data_dir
   3. 全局 ~/.hermes/config.yaml: tasks.data_dir
-  4. Fallback: ~/studio/hermes/tasks
+  4. Fallback: ~/.hermes/tasks
 
 Commands:
     create    创建新任务（目录 + hash + 元数据 + 模板 + 可选 inbox 移入）
@@ -32,7 +32,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-# ── config resolution (mirrors token-consumption-tracker pattern) ──
+# ── config resolution ──
 
 def _read_config_yaml(config_path):
     if not config_path or not os.path.exists(str(config_path)):
@@ -77,7 +77,7 @@ def _resolve_tasks_root() -> str:
                 return os.path.expanduser(val)
 
     # 4. Fallback
-    return os.path.expanduser("~/studio/hermes/tasks")
+    return os.path.expanduser("~/.hermes/tasks")
 
 
 TASKS_ROOT = _resolve_tasks_root()
@@ -489,7 +489,7 @@ def cmd_list():
 
 def cmd_migrate():
     """One-shot migration: copy files from old personal storage to task dir."""
-    old_root = os.path.expanduser("~/.hermes/personal/tasks")
+    old_root = os.path.expanduser("~/.hermes/tasks")
     if not os.path.isdir(old_root):
         print("No old personal/tasks directory to migrate from.")
         return True

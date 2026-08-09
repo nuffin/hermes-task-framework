@@ -53,4 +53,4 @@ rm -rf output/            # 删除所有分析文档和日志
 
 1. 确认所有交付物在 `output/docs/` 中
 2. 更新 TASK.md 状态为 `completed`
-3. 运行 `python3 ~/.hermes/skills/software-development/task-framework/scripts/update-index.py` 更新索引
+3. 运行 `python3 scripts/update-index.py` 更新索引

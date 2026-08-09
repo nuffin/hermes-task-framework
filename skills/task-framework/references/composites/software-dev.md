@@ -12,7 +12,7 @@ Standard round-trip for implementing a feature from scratch.
 5. project-tasks   → 更新 TASK.md，标记完成
 ```
 
-> **Note on docs:** The user prefers a four-doc split for feature work: 产品需求 (PRD), 产品设计 (product design), 技术需求 (TRD), 技术设计 (technical design). See `references/operations/document-write.md` for details. For small/straightforward features, a PRD+TRD pair may suffice — use judgment.
+> **Note on docs:** The recommended pattern is a four-doc split for feature work: 产品需求 (PRD), 产品设计 (product design), 技术需求 (TRD), 技术设计 (technical design). See `references/operations/document-write.md` for details. For small/straightforward features, a PRD+TRD pair may suffice — use judgment.
 
 ## Loop Patterns
 

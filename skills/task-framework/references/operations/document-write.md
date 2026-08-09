@@ -159,14 +159,14 @@ When writing or updating any of the four docs:
 
 ## Cross-Referencing with Session History
 
-When writing "as-built" docs for work already implemented, use the `conversation-message-list` skill to review the actual conversation and extract the precise set of changes:
+When writing "as-built" docs for work already implemented, use the `conversation-message-list` skill (if available) to review the actual conversation and extract the precise set of changes:
 
 ```bash
 # Get the session ID for the relevant conversation
 hermes sessions list
 
 # Show compact Q&A history (no tool calls)
-python3 ~/.hermes/skills/hermes/conversation-message-list/scripts/list-messages.py <session_id>
+python3 scripts/list-messages.py <session_id>
 ```
 
 This gives a tool-call-free list of every user question and final answer, which maps directly to feature requirements and design decisions.
@@ -177,9 +177,9 @@ This gives a tool-call-free list of every user question and final answer, which 
 |---------|------------|
 | Writing only PRD without design/tech docs | Split into all four to cover product + implementation perspectives |
 | ASCII diagrams with ambiguous proportion | Mark flex ratios explicitly (`flex: 2` / `flex: 1`) in the diagram caption |
-| Ignoring user feedback-coupling | Use feedback-station skill to cross-reference doc sections with user feedback IDs |
+| Ignoring user feedback-coupling | Use feedback-station skill (if available) to cross-reference doc sections with user feedback IDs |
 | Doc status unchanged after implementation | Update status from "需求讨论中" to actual development phase |
 | No known-issues section in tech design | Always include a backlog/Known Issues table to track gaps |
 | Overwriting existing PRD structure | Read existing doc first, then append/update sections — don't rewrite from scratch |
-| Writing docs from memory instead of session replay | Use `conversation-message-list` skill to re-read the actual conversation for accurate change scope |
+| Writing docs from memory instead of session replay | Use `conversation-message-list` skill (if available) to re-read the actual conversation for accurate change scope |
 | Forgetting to update sibling docs | When any one doc changes, check and update all four — they form a coherent set |

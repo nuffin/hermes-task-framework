@@ -139,7 +139,7 @@ Add a `> **发文：** ... ｜ **文号：** ... ｜ **目标节点：** ...` li
    ```
    This script has its own markdown→HTML renderer that handles Chinese headings, pipe tables, blockquotes, lists, code blocks, and `---` horizontal rules without pandoc's YAML issue.
 
-3. **Font Requirements:** This system has `WenQuanYi Zen Hei` at `/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc`. The CSS font-family MUST list this font first. Do NOT use:
+3. **Font Requirements:** Ensure a CJK font is installed (e.g., WenQuanYi Zen Hei, Noto Sans CJK). The CSS font-family MUST list an installed CJK font first. Do NOT use:
    - `Noto Sans CJK SC` (not installed)
    - `Source Han Sans SC` (not installed)
    - `SimSun` (not installed)

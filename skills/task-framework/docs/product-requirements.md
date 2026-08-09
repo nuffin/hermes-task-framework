@@ -6,7 +6,7 @@
 
 ## 一、概述
 
-Task Framework 是 Hermes Personal Suite 的核心技能之一，提供从任务创建、执行到归档的完整工作流。它覆盖三层能力：
+Task Framework 是 Hermes 的核心技能之一，提供从任务创建、执行到归档的完整工作流。它覆盖三层能力：
 
 - **方法论** — 如何把一句话需求拆成可执行的操作
 - **容器** — 如何在文件系统中有序组织任务产物
@@ -61,5 +61,5 @@ Task Framework 是 Hermes Personal Suite 的核心技能之一，提供从任务
 | 组件 | 关系 |
 |------|------|
 | `quality-gate` skill | 任务修改后自动触发质量门禁 |
-| `GIT.md` rule | git 操作前置同步（Pre-Change Sync）和后置清理（Post-Change Workflow） |
-| `dump-to-stage` skill | 任务的记忆备份不冲突 — task-framework 管任务内容，dump-to-stage 管系统状态 |
+| Git workflow rules | git 操作前置同步（Pre-Change Sync）和后置清理（Post-Change Workflow）（if available） |
+| Memory/state backup skill (if available) | 任务的记忆备份不冲突 — task-framework 管任务内容，backup skill 管系统状态 |

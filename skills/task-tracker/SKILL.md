@@ -39,7 +39,7 @@ version: 1.0.0
 |------|------|------|------|
 | `task_dir` | ✅ | path | TASK.md 所在目录的绝对路径 |
 | `phase` | ✅ | string | 当前完成的 phase 标识，如 `Phase 0: scrutiny-pipeline` |
-| `executor` | ✅ | string | 执行者名称，如 `scrutaris` |
+| `executor` | ✅ | string | 执行者名称，如 `my-agent` |
 | `findings` | ❌ | list | 关键发现行 |
 | `outputs` | ❌ | list | 产出文件路径（相对 task_dir） |
 | `next` | ❌ | string | 后续 phase |
@@ -63,19 +63,18 @@ version: 1.0.0
 - **下一步**: <next>
 ```
 
-4. 运行 `python3 ~/.hermes/skills/software-development/task-framework/scripts/update-index.py`
+4. 运行 `python3 scripts/update-index.py  # from the skill directory`
 
 ## 使用示例
 
 ```
 加载 task-tracker：
-  task_dir: /home/hauzer/studio/hermes/tasks/20260709-204723.token-factory-troupe-e957c3
+  task_dir: $HERMES_TASKS_ROOT/<ts>.<task-name>-<hash6>
   phase: Phase 0: scrutiny-pipeline
-  executor: scrutaris
+  executor: my-agent
   findings:
-    - 词元供应市场规模 ¥2,426万亿次(2025)，+1,603% YoY
-    - 硅基流动毛利率 -24%，公有云越卖越亏
-    - 推广免费token占销售费用 64.7%
+    - Finding 1
+    - Finding 2
   outputs:
     - output/docs/00-scrutiny-report.md
   next: Phase 1: domain-analysis
@@ -92,6 +91,6 @@ task-framework 不需要知道 `task-tracker` 的存在——它只提供 task �
 
 ## 与 orchestrator 的关系
 
-Orchestrator（stratis/corvan/valros）读取 TASK.md 的 `## Tracking` 段，获取 tracker skill 名和参数定义，注入到每个 phase 的 card body 或 worker brief 中。
+Orchestrators读取 TASK.md 的 `## Tracking` 段，获取 tracker skill 名和参数定义，注入到每个 phase 的 card body 或 worker brief 中。
 
 角色收到 card 后，在工作完成时按 brief 指令加载 `task-tracker` 并传入参数。角色不需要理解 task-framework——它只管传入参数。

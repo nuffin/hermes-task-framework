@@ -3,7 +3,7 @@
 Usage:
     from task_ref import resolve_ref, check_cycles, create_task_meta
 """
-import os, glob, json, secrets, datetime, re, sys, subprocess
+import os, glob, json, secrets, datetime, re, sys, subprocess, shutil
 from pathlib import Path
 
 
@@ -54,7 +54,7 @@ def _resolve_tasks_root() -> str:
                 return os.path.expanduser(val)
 
     # 4. Fallback
-    return os.path.expanduser("~/studio/hermes/tasks")
+    return os.path.expanduser("~/.hermes/tasks")
 
 
 TASKS_ROOT = _resolve_tasks_root()
@@ -111,7 +111,10 @@ def check_cycles(meta):
 
 def create_task_meta(task_dir, name, dependencies=None, related=None, supersedes=None, board="default"):
     """Create .hermes-task.json in a task directory. Returns the hash.
-    Also creates a kanban card on the specified board and stores the card ID."""
+
+    Optionally creates an external task manager card if the ``hermes kanban``
+    command is available (guarded — failures are non-fatal).
+    """
     h = _hash6()
     meta = {
         "hash": h,
@@ -132,13 +135,22 @@ def create_task_meta(task_dir, name, dependencies=None, related=None, supersedes
     with open(meta_path, 'w') as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
     
-    # Create kanban card
+    # Optional: create external task manager card (kanban). Guarded — skips silently if unavailable.
+    _try_create_kanban_card(task_dir, name, meta, meta_path, board)
+
+    return h
+
+
+def _try_create_kanban_card(task_dir, name, meta, meta_path, board):
+    """Attempt to create a kanban card via ``hermes kanban``. No-op on any failure."""
+    if not shutil.which("hermes"):
+        return
     dirname = os.path.basename(task_dir)
     title = f"{name} [task:{dirname}]"
     env = {**os.environ}
     env.pop("HERMES_KANBAN_BOARD", None)  # Avoid env leak override
     try:
-        result = subprocess.run(
+        subprocess.run(
             ["hermes", "kanban", "boards", "switch", board],
             capture_output=True, text=True, timeout=10, env=env,
         )
@@ -147,19 +159,15 @@ def create_task_meta(task_dir, name, dependencies=None, related=None, supersedes
             capture_output=True, text=True, timeout=15, env=env,
         )
         if result.returncode == 0:
-            # Parse card ID from output: "Created t_xxx  (ready, ...)"
             out = result.stdout.strip()
             m = re.search(r'Created (t_[a-f0-9]+)', out)
             if m:
                 card_id = m.group(1)
                 meta["kanban_card_id"] = card_id
-                # Update .hermes-task.json with card id
                 with open(meta_path, 'w') as f:
                     json.dump(meta, f, indent=2, ensure_ascii=False)
     except Exception as e:
-        print(f"  ⚠ kanban card creation failed: {e}", file=sys.stderr)
-    
-    return h
+        print(f"  ⚠ optional kanban card creation failed (non-fatal): {e}", file=sys.stderr)
 
 def set_output(task_dir, name, path):
     """Register a named output in .hermes-task.json."""

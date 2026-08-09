@@ -1,5 +1,5 @@
 ---
-author: Hauzer S. Lee
+author: Hermes Agent
 category: software-development
 description: 'Three-layer task system: (1) methodology — decompose complex work into
   composable operations (info-search, code-write, paper-reproduce…) and composite
@@ -121,28 +121,28 @@ When you receive a task request:
 
 ## Environment Variables
 
-This skill uses environment variables for portability across machines. After Personal Suite installation, these are set in `~/.hermes/personal/env.sh`:
+This skill uses environment variables for portability across machines. After installation, these are set in `~/.hermes/env.sh`:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `HERMES_TASKS_ROOT` | `~/studio/hermes/tasks` | Task container root (`tasks/2*/`, `tasks/inbox/`) |
-| `HERMES_PROJECTS_ROOT` | `~/studio/hermes/projects` | Project repos root |
+| `HERMES_TASKS_ROOT` | `$HERMES_TASKS_ROOT` | Task container root (`tasks/2*/`, `tasks/inbox/`) |
+| `HERMES_PROJECTS_ROOT` | `$HERMES_PROJECTS_ROOT` | Project repos root |
 
 **Usage rule:** All inline shell commands in this SKILL.md use `$HERMES_TASKS_ROOT` instead of bare `tasks/` paths. When running commands from a Hermes session, source the env file first:
 
 ```bash
-source ~/.hermes/personal/env.sh
+source ~/.hermes/env.sh
 ```
 
-If the variable is unset, fall back to `~/studio/hermes/tasks` (the historical default).
+If the variable is unset, fall back to `~/.hermes/tasks` (the historical default).
 
 ## Task Directory Structure
 
-The canonical tasks root is defined by `$HERMES_TASKS_ROOT` (default: `~/studio/hermes/tasks/`). All relative paths (e.g. `tasks/YYYYMMDD-*`) in documentation are relative to this root. When the user says "tasks" without qualification, this directory is the default reference — not the abstract concept of "任务". "创建一个任务" means creating a `YYYYMMDD-HHMMSS.<name>-<hash6>/` structure here using this skill.
+The canonical tasks root is defined by `$HERMES_TASKS_ROOT` (default: `~/.hermes/tasks/`). All relative paths (e.g. `tasks/YYYYMMDD-*`) in documentation are relative to this root. When the user says "tasks" without qualification, this directory is the default reference — not the abstract concept of "任务". "创建一个任务" means creating a `YYYYMMDD-HHMMSS.<name>-<hash6>/` structure here using this skill.
 
 🔴 **Semantic disambiguation (important):** When the user says "任务" or "task", first determine whether they mean (a) a task-framework managed task (in `tasks/YY.../` directories) or (b) a generic concept. Clues: specific name/timestamp, operating on a task directory → (a); abstract discussion → (b). For (a), always use task-framework tools (task_create, task_set_status, etc.) — never raw `mv`/`cp`/`rm` on task directories. For (b), handle as normal conversation.
 
-```\ntasks/\n├── README.md                  ← summary index (directory façade)\n├── TASKS.md                   ← aggregated checklist view (done/total per task)\n├── YYYYMMDD-HHMMSS.<task-name>-<hash6>/\n│   ├── README.md              ← goal, scope, key findings\n│   ├── TASK.md                ← checklist with status + checkboxes\n│   ├── CHANGELOG.md          ← per-task changelog: auto-appended log of decisions, state, findings\n│   ├── MEMORY.md               ← compact §-delimited durable facts (ports, rules, constraints). REQUIRED to maintain — see compact-directory-memory skill for format and trigger rules.
+```\ntasks/\n├── README.md                  ← summary index (directory façade)\n├── TASKS.md                   ← aggregated checklist view (done/total per task)\n├── YYYYMMDD-HHMMSS.<task-name>-<hash6>/\n│   ├── README.md              ← goal, scope, key findings\n│   ├── TASK.md                ← checklist with status + checkboxes\n│   ├── CHANGELOG.md          ← per-task changelog: auto-appended log of decisions, state, findings\n│   ├── MEMORY.md               ← compact §-delimited durable facts (ports, rules, constraints). REQUIRED to maintain — see your memory management skill (if available) for format and trigger rules.
 │   ├── input/                 ← **source files** — NEVER deleted by cleanup operations\n│   │                           (PDF, DOCX, images, REQUIREMENTS.md copied from inbox)\n│   ├── output/                ← **generated files** — CAN be safely deleted entirely\n│   │   ├── docs/              ← analysis documents, reports (for analysis tasks)\n│   │   ├── logs/              ← execution logs\n│   │   ├── tts-<hash6>/       ← pipeline phase dirs (for pipeline tasks)\n│   │   ├── RECORDING.md       ← pipeline generated specs\n│   │   ├── COMPOSITING.md\n│   │   └── ...\n│   ├── inbox/                 ← proposal inbox (one file/dir per idea)\n│   └── declined/              ← rejected proposals (with DECLINED.md)\n```
 
 **`input/` 目录** — 存放从 inbox 复制来的源文件（PDF、DOCX、图片、REQUIREMENTS.md 等）。**核心规则：所有删除操作不得触及 `input/`。**
@@ -283,7 +283,7 @@ tasks/<ts>.<name>-<hash6>/
 ├── recording-bd71ef/        ← browser-video-recording 的工作目录
 │   ├── video.mp4
 │   └── timeline.txt
-├── compositing-c9f3a2/      ← video-audio-compositing 的工作目录
+├── compositing-c9f3a2/      ← <domain-skill> 的工作目录
 │   └── output.mp4
 ├── docs/                   ← 共享文档（timestamps.json、多 phase 共用文件等）
 └── logs/
@@ -328,7 +328,7 @@ When a task has a `run.py` at its root, use it as the single entry point. The au
 |------|------|------|
 | (无标注) | 按顺序串行，在前一阶段之后执行 | `Phase 2 — 录制视频` |
 | `和 Phase X 同步进行` | 和 Phase X 并行执行 | `Phase 2 (browser-video-recording) — 和 Phase 1 同步进行, 录制视频` |
-| `等待 Phase X 完成` | Phase X 完成后才执行，不关心其他阶段 | `Phase 3 (video-audio-compositing) — 等待 Phase 1 完成, 等待 Phase 2 完成, 合成` |
+| `等待 Phase X 完成` | Phase X 完成后才执行，不关心其他阶段 | `Phase 3 (<domain-skill>) — 等待 Phase 1 完成, 等待 Phase 2 完成, 合成` |
 
 **Implementation:** 并行阶段通过 `delegate_task()` 启动子代理执行。等待阶段通过 `process(action='wait')` 或检查输出产物来判断完成。
 
@@ -343,7 +343,7 @@ When a task has a `run.py` at its root, use it as the single entry point. The au
 
 - `text-to-speech` — 生成语音音频
 - `browser-video-recording` — 录制浏览器操作视频
-- `video-audio-compositing` — 合成音视频
+- `<domain-skill>` — 合成音视频
 
 ## 环境要求
 
@@ -357,7 +357,7 @@ When a task has a `run.py` at its root, use it as the single entry point. The au
 
 - [ ] Phase 1 (text-to-speech) — 根据解说脚本生成 N 段音频
 - [ ] Phase 2 (browser-video-recording) — 和 Phase 1 同步进行, 录制浏览器操作视频
-- [ ] Phase 3 (video-audio-compositing) — 等待 Phase 1 完成, 等待 Phase 2 完成, 将音频合成到视频的正确时间点
+- [ ] Phase 3 (<domain-skill>) — 等待 Phase 1 完成, 等待 Phase 2 完成, 将音频合成到视频的正确时间点
 - [ ] BREAK: 检查最终视频效果
 ```
 
@@ -417,7 +417,7 @@ Unimplemented phases (5-7 in the template) return True (skip, don't fail).
 
 用一个文件描述完整流水线，`generate_all()` 自动拆解生成各子 spec。
 
-参考 `standards/video-production-spec.md`，工具入口 `video-audio-compositing/scripts/utils/production_spec.py`：
+参考 `standards/video-production-spec.md`，工具入口 `<domain-skill>/scripts/utils/production_spec.py`：
 
 ```python
 from utils.production_spec import generate_all
@@ -570,7 +570,7 @@ The agent reads TASK.md from top to bottom:
 **BREAK 行** → 执行到此时暂停，输出内容给用户。用户确认后将 `[ ] BREAK:` 改成 `[x] DONE:`，下次自动跳过。
 
 
-**🔴 执行纪律：非 BREAK 不停** — 完成一个 `[ ]` 项后，立即找到下一个未完成的 `[ ]` 项。如果中间没有 `[ ] BREAK:`，直接执行，绝不询问"要不要继续"。用户对停顿询问非常反感。
+**🔴 执行纪律：非 BREAK 不停** — 完成一个 `[ ]` 项后，立即找到下一个未完成的 `[ ]` 项。如果中间没有 `[ ] BREAK:`，直接执行，绝不询问"要不要继续"。Frequent confirmation prompts disrupt workflow.
 
 ---
 
@@ -663,7 +663,7 @@ The script handles: directory creation (`<ts>.<name>-<hash6>/`), subdirs (`input
    执行: `uv run python <script>`
    ```
 
-5. **Kanban 卡片**（如有 kanban 集成）：在 `default` 看板创建卡片，卡片标题 `<task-name> [task:<目录名>]`，assignee `default`，卡片 ID 写入 `.hermes-task.json`。
+5. **(Optional) External task manager card** — if using an external task manager (kanban board, issue tracker, etc.), create a card/issue with title `<task-name> [task:<目录名>]` and store its ID in `.hermes-task.json`.
 
 Skill 的 `scripts/create_task.py` 接口约定：
 
@@ -683,7 +683,7 @@ task_hash = sys.argv[3]
 # ... skill 自己的逻辑
 ```
 
-**示例：** 创建带 browser-screen-record-task 模板的任务：
+**示例：** 创建带 `<custom-skill>` 模板的任务：
 
 ```bash
 # Step 1: script creates base structure
@@ -825,8 +825,8 @@ python3 scripts/update-index.py  # from the skill directory
 Output:
 ```
 Updated:
-  /home/hauzer/studio/hermes/tasks/README.md  (1464B)
-  /home/hauzer/studio/hermes/tasks/TASKS.md   (6912B)
+  $HERMES_TASKS_ROOT/README.md  (1464B)
+  $HERMES_TASKS_ROOT/TASKS.md   (6912B)
   Found 9 active tasks
 ```
 
@@ -921,17 +921,17 @@ python3 scripts/manage_task.py reset <hash_or_dir> [--no-hard]
 
 # ── 底层操作 ──
 # 初始化一个任务（创建目录 + TASK.md + CHANGELOG.md + .hermes-task.json）
-python3 scripts/manage_task.py init 5d5a1a
-python3 scripts/manage_task.py init tasks/20260605-233355.health-sales-demo-5d5a1a/
+python3 scripts/manage_task.py init <hash6>
+python3 scripts/manage_task.py init tasks/<ts>.<task-name>-<hash6>/
 
 # 导出任务（tar.gz）
-python3 scripts/manage_task.py export 5d5a1a
+python3 scripts/manage_task.py export <hash6>
 
 # 导入任务
-python3 scripts/manage_task.py import tasks/20260605-233355.health-sales-demo-5d5a1a.tar.gz
+python3 scripts/manage_task.py import tasks/<ts>.<task-name>-<hash6>.tar.gz
 
 # 按 hash 重建（查找最近 tar.gz）
-python3 scripts/manage_task.py rebuild 5d5a1a
+python3 scripts/manage_task.py rebuild <hash6>
 
 # 一次性迁移：将旧个人存储目录下的文件迁移到统一目录
 python3 scripts/manage_task.py migrate
@@ -957,15 +957,15 @@ python3 scripts/manage_task.py list
 
 ```bash
 # 源机器：导出
-cd ~/studio/hermes
-python3 scripts/manage_task.py  # from the skill directory export 5d5a1a
-git add tasks/*5d5a1a*.tar.gz
-git commit -m "export 5d5a1a"
+cd "$HERMES_TASKS_ROOT"
+python3 scripts/manage_task.py  # from the skill directory export <hash6>
+git add tasks/*<hash6>*.tar.gz
+git commit -m "export <hash6>"
 git push
 
 # 目标机器：拉取 + 导入
 git pull
-python3 scripts/manage_task.py  # from the skill directory rebuild 5d5a1a
+python3 scripts/manage_task.py  # from the skill directory rebuild <hash6>
 ```
 
 ### 旧任务（无 hash）的管理
@@ -993,7 +993,7 @@ After modifying any TASK.md, README.md, or log file inside a task directory, run
 
 ## Task Tracking (automatic phase completion log)
 
-When TASK.md includes a `## Tracking` section, orchestrators (stratis/corvan/valros)
+When TASK.md includes a `## Tracking` section, orchestrators
 inject tracking instructions into each dispatched card. The executor loads
 `task-tracker` skill after each phase to:
 - Mark the phase checkbox `[x]` in TASK.md
@@ -1170,7 +1170,7 @@ check_cycles(meta)  # raises ValueError on cycle
 |------|------|------|---------|
 | `TASK.md` | checklist、状态、要求 | 创建时填充 | 手动维护 |
 | `CHANGELOG.md` | 操作记录、决策、发现、阻塞原因 | 自动追加 | 按时间追加，永不删除 |
-| `MEMORY.md` | 跨阶段的硬事实（端口、规则、公约） | 手动维护 | §-delimited, compact format; MUST use `compact-directory-memory` skill for format and trigger rules. Review after every phase completion or session that changes task state. |
+| `MEMORY.md` | 跨阶段的硬事实（端口、规则、公约） | 手动维护 | §-delimited, compact format; MUST use your memory management skill (if available) for format and trigger rules. Review after every phase completion or session that changes task state. |
 | `logs/` | 命令输出 | 自动生成 | 可清理 |
 | `.hermes-task.json` | hash、outputs、依赖 | 自动维护 | 随任务更新 |
 
@@ -1191,7 +1191,7 @@ check_cycles(meta)  # raises ValueError on cycle
 ```
 ## 2026-06-06 13:00
 
-**操作:** 重命名 task 目录 demo-video-production-v2 → health-sales-demo-5d5a1a
+**操作:** 重命名 task 目录 <old-name> → <task-name>-<hash6>
 **原因:** 遵循新命名规则，目录名需包含 hash
 **改动:**
 - 目录改名
@@ -1285,7 +1285,7 @@ python3 scripts/manage_task.py create <task-name>  # from the skill directory
 post-flight 的 Integrity Check 会检查"本轮的复杂程度是否达到了触发条件"，
 Pending Action Scan 会处理"达到了但没有 task 目录 → 立即补建"。
 CHANGELOG.md 的创建和维护是 post-flight 后置链的固定组成部分。
-同样，**当 `compact-directory-memory` skill 可用时，post-flight 应触发 MEMORY.md
+同样，**当 your memory management skill 可用时，post-flight 应触发 MEMORY.md
 的审查**：检查现有事实是否过时、本 session 是否产生了需要记录的新事实。
 
 - **`.hermes-task.json` 必须在任务根目录** — 和 TASK.md 同级
@@ -1300,16 +1300,16 @@ CHANGELOG.md 的创建和维护是 post-flight 后置链的固定组成部分。
 | Operation catalog out of date | Add new operations as they're discovered. |
 | **🔴 Never fill task placeholders from conversation history** | When user says \"create a task named X\", create an empty template with all `{placeholder}` intact. Do NOT infer URL, steps, or operations from earlier chat context unless user explicitly says \"根据上面的对话\" or similar. Corrected multiple times — the user will delete and re-create if you guess. |\n| **🔴 File moves must be ln/cp + verify + rm** | Never `mv`. Use `ln <src> <dst>`, verify with `ls -la`, then `rm <src>`. |
 | **🔴 Missing `## 环境要求` in TASK.md** | Executor pre-flight forces this check. Always include it. |
-| **🔴 Confirm CWD before creating tasks** | Project root must have `tasks/` dir. If not, confirm user expects `~/studio/hermes/tasks/` as base. |
-| **🔴 "tasks" naming ambiguity + no manual management** | When user says "tasks" or "task", first disambiguate: (a) task-framework managed → use task_create/task_set_status/etc., never raw `mv`/`cp`/`rm` on task dirs; (b) generic concept → normal conversation. See `PROJECT_STRUCTURE.md` for the full convention. Corrected: manual `mv` on a task dir instead of using framework. |
+| **🔴 Confirm CWD before creating tasks** | Project root must have `tasks/` dir. If not, confirm user expects `$HERMES_TASKS_ROOT/` as base. |
+| **🔴 "tasks" naming ambiguity + no manual management** | When user says "tasks" or "task", first disambiguate: (a) task-framework managed → use task_create/task_set_status/etc., never raw `mv`/`cp`/`rm` on task dirs; (b) generic concept → normal conversation. Corrected: manual `mv` on a task dir instead of using framework. |
 | 🔴 Log accumulation | Clean old logs with `rm tasks/*.<name>/logs/*.YYYYMMDD-*.log`. |
 | 🔴 Root index files stale | After creating/updating/deleting any task, run `python3 scripts/update-index.py  # from the skill directory` to regenerate both `tasks/README.md` and `tasks/TASKS.md`. Users rely on these indexes for overview. |
 | **🔴 Data Flow table not consulted** | In cross-skill composite tasks, a phase that produces a file (e.g. TTS → `audio_manifest.json`) must write it in the format expected by the consumer phase. The `## Data Flow` table's `格式说明` column tells you where to find that format spec. Don't guess the schema — load the referenced skill/reference file and read it. Corrected in discussion about how compositing finds audio manifest format. |
 | **`tasks/2*/` glob matches active tasks only** | Inbox/declined don't start with `2` — natural filtering. |
 | **`## Status` empty line matters** | `grep -A2` not `-A1` to skip blank line after header. |
 | LLM reasoning where a script would do | If you've repeated the same manual sequence twice, write a script. The LLM should handle judgment, not memorized mechanical steps. |
-| **🔴 Don't stop & ask between checklist items unless there's a BREAK** | Execution Logic says: `[ ] BREAK:` → pause; `[ ]` → execute immediately. After completing one item, scan for the next unchecked `[ ]`. If there's no BREAK between them, execute it right away — do NOT ask 'do you want to continue?'. User corrected: '继续呀！！！你为什么要听下呢？这里有说要break吗？' Parallel dependencies (e.g. 'and Phase 1 同步进行') don't imply you should wait for instructions — check if the dependency is already resolved and act. |
+| **🔴 Don't stop & ask between checklist items unless there's a BREAK** | Execution Logic says: `[ ] BREAK:` → pause; `[ ]` → execute immediately. After completing one item, scan for the next unchecked `[ ]`. If there's no BREAK between them, execute it right away — do NOT ask 'do you want to continue?'. Parallel dependencies (e.g. 'and Phase 1 同步进行') don't imply you should wait for instructions — check if the dependency is already resolved and act. |
 | **🔴 Never modify REQUIREMENTS.md** | REQUIREMENTS.md is user-owned. If changes are needed, tell the user what to change and let them do it themselves. Do NOT edit it directly — the user won't know what changed. Corrected twice in one session. |
 | **🔴 Input source files go in input/, output/ is for generated files** | `task_reset --hard` does `rm -rf output/`. Any source file (PDF, DOCX, images, REQUIREMENTS.md) placed in `output/` will be lost. Always put source material in `input/`. |
 | **🔴 Inbox source files must be copied to task** | When creating a task from an inbox file (PDF/DOCX/etc.), copy the file into the task's `input/` directory. A Data Flow reference to `tasks/inbox/...` is fragile — the inbox item could be moved or deleted independently of the task. The task must be self-contained. |
-| **🔴 Design discussion ≠ execution signal** | When the user makes observations, suggestions, or asks how a system/skill/process should work (e.g. "在从 REQUIREMENTS.md 生成 RECORDING.md 的时候，xxx 应该 yyy"), they are in **design/discussion mode**. Do NOT start executing pipeline steps or making code changes based on a design opinion. Wait for explicit go-ahead ("可以了" / "继续" / "跑吧"). Corrected with extreme frustration — user hadn't finished their thought. |
+| **🔴 Design discussion ≠ execution signal** | When the user makes observations, suggestions, or asks how a system/skill/process should work (e.g. "在从 REQUIREMENTS.md 生成 RECORDING.md 的时候，xxx 应该 yyy"), they are in **design/discussion mode**. Do NOT start executing pipeline steps or making code changes based on a design opinion. Wait for explicit go-ahead. This pattern has caused confusion in practice. |

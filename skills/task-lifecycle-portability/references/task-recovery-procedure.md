@@ -46,7 +46,7 @@ Only mark phases `[x]` if the output artifact exists and can be verified. If a p
 ## Step 6: Update indexes
 
 ```bash
-python3 ~/.hermes/skills/software-development/task-framework/scripts/update-index.py
+python3 scripts/update-index.py  # from the skill directory
 ```
 
 ## Pitfalls

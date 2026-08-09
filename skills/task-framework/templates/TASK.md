@@ -31,7 +31,7 @@ active — <brief description of current work>
      而非 task/output/。执行日志和调试信息仍放在 task/output/logs/。
      没有此字段时，所有产出放 task/output/（默认行为）。 -->
 
-路径: `<绝对路径，如 ~/studio/hermes/projects/agora/>`
+路径: `<absolute path to project repo>`
 用途: <一句话描述>
 
 ## Affinity (cluster task)
@@ -41,9 +41,9 @@ active — <brief description of current work>
 
 - `any` — 任何节点可认领
 - `<hash6>` — 指定节点（推荐；跨机器同步安全）
-- `<suite-name>` — 拥有此套件的节点（如 `hermes-personal-suite`）
+- `<suite-name>` — 拥有此套件的节点（如 `<suite-name>`）
 - `<tag>` — 能力标签匹配（如 `gpu`, `docker`）
-- 逗号分隔 → AND 逻辑（`hermes-personal-suite,gpu` 两样都有才匹配）
+- 逗号分隔 → AND 逻辑（`<suite-name>,gpu` 两样都有才匹配）
 
 注意：不要用 `local`。tasks repo 同步到其他机器后，每台都会把 `local` 当成自己的任务，造成混乱。用 node_id（hash6）代替。
 
@@ -81,7 +81,7 @@ active — <brief description of current work>
 ## Tracking
 
 <!-- 可选。每个 phase 完成后需要更新的跟踪记录。
-     编排者（stratis/corvan/valros）读到本节后，自动注入到各 phase 的 card/worker brief 中。 -->
+     编排者（orchestrators）读到本节后，自动注入到各 phase 的 card/worker brief 中。 -->
 
 加载 `task-tracker` skill，传入以下参数：
 
@@ -89,7 +89,7 @@ active — <brief description of current work>
 |------|-----|------|
 | `task_dir` | 本 TASK.md 所在目录的绝对路径 | 让 tracker 定位任务 |
 | `phase` | 当前完成的 phase 标识 | 如 Phase 0: scrutiny-pipeline |
-| `executor` | 执行者名称 | 如 scrutaris |
+| `executor` | 执行者名称 | 如 my-agent |
 | `findings` | 关键发现（每行一条） | 从产出中提炼 3-5 条 |
 | `outputs` | 产出文件路径（相对 task_dir） | 如 output/docs/00-report.md |
 | `next` | 下一个 phase | 如 Phase 1: domain-analysis |

@@ -1,5 +1,5 @@
 ---
-author: Hauzer S. Lee
+author: Hermes Agent
 category: software-development
 description: Task migration, export/import, and file-protection model. Covers tar.gz
   snapshots and manage.py lifecycle commands (export/import/rebuild).
@@ -66,7 +66,7 @@ tasks/<ts>.<name>-<hash6>/
 | `rebuild <hash>` | Find latest `<hash>.tar.gz` in `tasks/`, extract. Generates semantic directory name from TASK.md title |
 
 **Actual script path:**
-`~/.hermes/skills/software-development/task-framework/scripts/manage_task.py`
+`scripts/manage_task.py  # from the task-framework skill directory`
 
 Usage: `python3 <path> <command> <arg>`
 
@@ -97,7 +97,7 @@ See `references/task-recovery-procedure.md` for the full step-by-step TASK.md re
 
 🔴 Critical: Do NOT guess phase structure from memory. Load the domain skill that governs this task type and use its defined phases. Verify each phase's output file exists before marking complete.
 
-**Real-world example:** `references/task-recovery-5d5a1a-example.md` — step-by-step walkthrough of recovering 5d5a1a's TASK.md after it was lost to exclusion-based cleanup.
+**Real-world example:** `references/task-recovery-<hash6>-example.md` — step-by-step walkthrough of recovering <hash6>'s TASK.md after it was lost to exclusion-based cleanup.
 
 ## Pipeline Output Model (Design)
 

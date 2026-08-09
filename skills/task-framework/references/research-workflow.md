@@ -109,7 +109,7 @@ Each subagent's prompt must include:
 Example task spec:
 
 ```
-"context": "输出文件：~/studio/project/tasks/*.research/docs/competitor-qinjia.md
+"context": "输出文件：$HERMES_TASKS_ROOT/<ts>.<name>/docs/competitor-<name>.md
 格式规范：
 # 亲家科技
 ## 产品体系
@@ -132,7 +132,7 @@ delegate_task(
 )
 ```
 
-Max concurrent tasks for this user: 3. Time budget: ~5-10 min each.
+Max concurrent tasks: 3 (adjust per environment). Time budget: ~5-10 min each.
 
 ## Compile results
 

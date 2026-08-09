@@ -2,7 +2,7 @@
 
 ## What Changed
 
-`video-production-pipeline/scripts/pipeline.py` was updated to write all generated files to `output/` instead of the task root.
+`<domain-skill>/scripts/pipeline.py` was updated to write all generated files to `output/` instead of the task root.
 
 | Before | After |
 |--------|-------|
@@ -38,4 +38,4 @@ TTS cache scanning now looks in `output/` directory for existing tts-* dirs:
 
 ## script path
 
-`~/.hermes/skills/media/video-production-pipeline/scripts/pipeline.py`
+`<skill-path>/scripts/pipeline.py`

@@ -1,10 +1,10 @@
 # Session Design Notes: Task Portability
 
-From a session with Hauzer on 2026-06-11 discussing TASK.md loss and recovery architecture.
+Session notes (2026-06-11) discussing TASK.md loss and recovery architecture.
 
 ## Problem
 
-Pipeline exclusion-based deletion (`rm -rf tts-*/ RECORDING.md ...` or `find . -not -name 'REQUIREMENTS.md' -delete`) destroyed TASK.md because it was a regular file in the task root. User observed: "你那次是排除式删除，把除了 REQUIREMENTS.md 之外的很多有用的文件都删光了."
+Pipeline exclusion-based deletion (`rm -rf tts-*/ RECORDING.md ...` or `find . -not -name 'REQUIREMENTS.md' -delete`) destroyed TASK.md because it was a regular file in the task root. The root cause was exclusion-based deletion catching all non-protected files.
 
 ## Solution Architecture (agreed design)
 

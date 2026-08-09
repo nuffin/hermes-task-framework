@@ -23,8 +23,8 @@ The hash suffix at the end of the directory name ensures:
 
 Example:
 ```
-tasks/20260605-233355.health-sales-demo-5d5a1a/
-├── .hermes-task.json     ← hash: "5d5a1a", name: "health-sales-demo-5d5a1a"
+tasks/<ts>.<task-name>-<hash6>/
+├── .hermes-task.json     ← hash: "<hash6>", name: "<task-name>-<hash6>"
 ├── TASK.md
 └── ...
 ```

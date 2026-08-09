@@ -130,22 +130,18 @@ This pattern extends the `task-framework` skill's directory structure. The `task
 
 For `task_reset --hard` semantics: `repos/` is never deleted by cleanup operations (same as `input/`). Custom `clean.sh` scripts can further refine which directories to protect.
 
-## Kanban Escalation: Multi-Repo Tasks → Kanban
+## Optional: Escalate to External Task Manager
 
-When a task involves **multiple independent external repos** (e.g. cloning 5+ repos from an awesome-list for study), the work typically decomposes into parallel workstreams. The user's convention is **one kanban card per task-framework task** (not one card per sub-operation):
-
-User signal: *"一个 clone 任务创建一个 card"* / *"这是多个任务了，放到 default 看板里"*
+When a task involves **multiple independent external repos** (e.g. cloning 5+ repos from an awesome-list for study), the work typically decomposes into parallel workstreams. The recommended convention is **one tracking card per task-framework task** (not one card per sub-operation):
 
 **Right approach:**
 1. Create a single task-framework task with its own `repos/` directory
-2. Create one kanban card for that task, `--workspace dir:<task-path>`
-3. Update the bridge db.yaml to map task hash ↔ card id
+2. If using an external task manager (kanban board, issue tracker, etc.), create one card/issue for that task and link it via the task hash
+3. Map the external card ID back to `.hermes-task.json` if your workflow requires bidirectional linking
 
 **Wrong approach:**
-- Creating one kanban card per individual sub-repo
+- Creating one tracking card per individual sub-repo
 - Mixing unrelated work into one card
-
-See also: `kanban-orchestrator` skill for decomposition playbook, `kanban-bridge` for task ↔ card mapping.
 
 ## Custom Clean Methods (Implemented)
 
@@ -178,9 +174,9 @@ echo "[clean] output/ cleaned"
 - 没有 clean.sh 时回退到默认行为，不破坏现有任务
 
 **本 task 的 clean.sh 示例路径：**
-`tasks/20260615-213922.awesome-obsidian-vaults-cc6b3b/scripts/clean.sh`
+`tasks/<ts>.<task-name>-<hash6>/scripts/clean.sh`
 该脚本保护 `repos/`、`input/`，只清理 `output/`。
 
 **Framework 集成状态：**
-- `task-framework` SKILL.md 已更新，记录了 clean.sh 查找顺序和模板（`~/hermes/skills/software-development/task-framework/SKILL.md` 的 Task Directory Structure 章节）
+- `task-framework` SKILL.md 已更新，记录了 clean.sh 查找顺序和模板
 - `analysis` task-type 生命周期文档也加了自定义清理的提示
