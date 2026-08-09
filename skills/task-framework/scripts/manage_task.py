@@ -592,8 +592,8 @@ def cmd_create(name, from_inbox=None, description=None):
     cl_tmpl = _load_template('CHANGELOG.md')
     if cl_tmpl:
         cl_content = cl_tmpl.replace(
-            '## 2026-06-06 HH:MM',
-            f"## {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+            '## 2026-06-06 HH:MM:SS',
+            f"## {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     else:
         cl_content = f"# CHANGELOG.md -- {h}\n"
     with open(os.path.join(task_dir, 'CHANGELOG.md'), 'w') as f:
