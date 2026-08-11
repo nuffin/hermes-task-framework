@@ -46,9 +46,11 @@ def _read_config_yaml(config_path):
 
 
 def _resolve_tasks_root() -> str:
-    """Priority chain: env → profile config → global config → fallback."""
-    # 1. Env var
-    env = os.environ.get("HERMES_TASKS_DIR", "").strip()
+    """Resolve the task root with ROOT as canonical and DIR as legacy fallback."""
+    # 1. Canonical env var, then the legacy pip-package compatibility alias.
+    env = os.environ.get("HERMES_TASKS_ROOT", "").strip()
+    if not env:
+        env = os.environ.get("HERMES_TASKS_DIR", "").strip()
     if env:
         return os.path.expanduser(env)
 
