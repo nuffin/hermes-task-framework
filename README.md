@@ -19,7 +19,7 @@ trackable task directories — cross-session, cross-profile, cross-machine.
 | `task-tracker` | Bookkeeping: TASK.md checkbox updates, CHANGELOG.md append, index refresh |
 | `task-timestamp-convention` | Naming conventions: local-time timestamps, self-explanatory names |
 | `task-lifecycle-edge-cases` | Recovery: TASK.md resurrection from artifacts |
-| `task-lifecycle-portability` | Export/import/migration between machines via tar.gz |
+| `task-lifecycle-portability` | Export/import/migration between machines via tar.gz or zip |
 | `task-external-repos-pattern` | Cloning external git repos into task directories for analysis |
 
 ## Install

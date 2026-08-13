@@ -22,12 +22,12 @@ Commands:
     reindex   重建索引文件（README.md + TASKS.md）
     init      为任务创建目录 + TASK.md + CHANGELOG.md + .hermes-task.json
     export    将任务打包为可移植 tar.gz
-    import    从 tar.gz 恢复任务
-    rebuild   按 hash 查找最近 tar.gz 并导入
+    import    从 tar.gz 或 zip 恢复任务
+    rebuild   按 hash 查找最近 tar.gz 或 zip 并导入
     migrate   一次性迁移：将旧存储目录下的文件迁移到统一目录
     ensure-all 全量注册所有现有任务
 """
-import os, sys, glob, json, shutil, re, tarfile, tempfile, hashlib, random, argparse, secrets
+import os, sys, glob, json, shutil, re, tarfile, zipfile, tempfile, hashlib, random, argparse, secrets
 from datetime import datetime
 from pathlib import Path
 
@@ -362,8 +362,15 @@ def cmd_import(archive_path):
         print(f"Archive not found: {archive_path}")
         return False
     with tempfile.TemporaryDirectory(prefix="task-import-") as tmp:
-        with tarfile.open(archive_path, 'r:gz') as tar:
-            tar.extractall(path=tmp)
+        if tarfile.is_tarfile(archive_path):
+            with tarfile.open(archive_path, 'r:gz') as tar:
+                tar.extractall(path=tmp)
+        elif zipfile.is_zipfile(archive_path):
+            with zipfile.ZipFile(archive_path) as archive:
+                archive.extractall(path=tmp)
+        else:
+            print(f"Unsupported archive format: {archive_path}")
+            return False
         extracted = os.listdir(tmp)
         print(f"Extracted: {extracted}")
 
@@ -417,16 +424,25 @@ def cmd_import(archive_path):
 
 
 def cmd_rebuild(hash_or_archive):
-    if tarfile.is_tarfile(hash_or_archive):
+    if os.path.isfile(hash_or_archive) and (
+        tarfile.is_tarfile(hash_or_archive) or zipfile.is_zipfile(hash_or_archive)
+    ):
         return cmd_import(hash_or_archive)
     h = hash_or_archive
     if not re.match(r'^[a-z0-9]{6}$', h):
         print(f"Invalid hash: {h}")
         return False
-    pattern = os.path.join(TASKS_ROOT, f"*{h}*.tar.gz")
-    matches = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
+    patterns = [
+        os.path.join(TASKS_ROOT, f"*{h}*.tar.gz"),
+        os.path.join(TASKS_ROOT, f"*{h}*.zip"),
+    ]
+    matches = sorted(
+        [match for pattern in patterns for match in glob.glob(pattern)],
+        key=os.path.getmtime,
+        reverse=True,
+    )
     if not matches:
-        print(f"No tar.gz found for hash {h} in {TASKS_ROOT}")
+        print(f"No tar.gz or zip found for hash {h} in {TASKS_ROOT}")
         return False
     archive = matches[0]
     print(f"Found: {archive}")

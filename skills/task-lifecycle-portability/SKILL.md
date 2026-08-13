@@ -1,7 +1,7 @@
 ---
 author: Hermes Agent
 category: software-development
-description: Task migration, export/import, and file-protection model. Covers tar.gz
+description: Task migration, export/import, and file-protection model. Covers tar.gz and zip
   snapshots and manage.py lifecycle commands (export/import/rebuild).
 license: MIT
 metadata:
@@ -62,8 +62,8 @@ tasks/<ts>.<name>-<hash6>/
 | Command | What it does |
 |---------|-------------|
 | `export <hash>` | Package task directory as `tasks/<ts>.<name>-<hash>.tar.gz` (excludes `output/`, includes `input/` + metadata files) |
-| `import <tar.gz>` | Extract to `tasks/` directory, restore all files |
-| `rebuild <hash>` | Find latest `<hash>.tar.gz` in `tasks/`, extract. Generates semantic directory name from TASK.md title |
+| `import <tar.gz-or-zip>` | Extract to `tasks/` directory, restore all files |
+| `rebuild <hash>` | Find latest `<hash>.tar.gz` or `<hash>.zip` in `tasks/`, extract. Generates semantic directory name from TASK.md title |
 
 **Actual script path:**
 `scripts/manage_task.py  # from the task-framework skill directory`
@@ -73,12 +73,12 @@ Usage: `python3 <path> <command> <arg>`
 **Export behavior:**
 - Archive contains actual file content (no symlinks involved)
 - Output dir is excluded (it's regenerable via pipeline)
-- `tar.gz` acts as a portable backup that can be committed to git
+- `tar.gz` and `zip` act as portable backups that can be committed to git
 
 **Cross-machine strategy:**
 - No automatic merge — each machine's copy is an independent task
 - To combine work from two machines: create a new task referencing both via `ref:<hash>/...`
-- `tar.gz` in git repo acts as backup
+- `tar.gz` or `zip` in git repo acts as backup
 
 ## Old Tasks (Migration)
 

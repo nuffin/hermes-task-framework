@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 
 
 SCRIPT = (
@@ -70,6 +71,45 @@ class TaskRootResolutionTests(unittest.TestCase):
             created = list(Path(temp_dir).glob("*.root-only-test-*"))
             self.assertEqual(len(created), 1)
             self.assertTrue((created[0] / ".hermes-task.json").exists())
+
+    def test_import_accepts_zip_archive(self):
+        module = load_manage_task()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            setattr(module, "TASKS_ROOT", temp_dir)
+            task_name = "20260813-120000.zip-import-a1b2c3"
+            task_dir = Path(temp_dir) / task_name
+            staging = Path(temp_dir) / "staging" / task_name
+            staging.mkdir(parents=True)
+            (staging / "TASK.md").write_text("# Task: ZIP import\n", encoding="utf-8")
+            (staging / ".hermes-task.json").write_text(
+                '{"hash": "a1b2c3", "name": "zip-import"}', encoding="utf-8"
+            )
+            archive_path = Path(temp_dir) / f"{task_name}.zip"
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                for path in staging.rglob("*"):
+                    archive.write(path, path.relative_to(staging.parent))
+
+            self.assertTrue(module.cmd_import(str(archive_path)))
+            self.assertTrue((task_dir / "TASK.md").exists())
+
+    def test_rebuild_discovers_latest_zip_archive(self):
+        module = load_manage_task()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            setattr(module, "TASKS_ROOT", temp_dir)
+            task_name = "20260813-120000.zip-rebuild-d4e5f6"
+            archive_path = Path(temp_dir) / f"{task_name}.zip"
+            staging = Path(temp_dir) / "staging" / task_name
+            staging.mkdir(parents=True)
+            (staging / "TASK.md").write_text("# Task: ZIP rebuild\n", encoding="utf-8")
+            (staging / ".hermes-task.json").write_text(
+                '{"hash": "d4e5f6", "name": "zip-rebuild"}', encoding="utf-8"
+            )
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                for path in staging.rglob("*"):
+                    archive.write(path, path.relative_to(staging.parent))
+
+            self.assertTrue(module.cmd_rebuild("d4e5f6"))
+            self.assertTrue((Path(temp_dir) / task_name / "TASK.md").exists())
 
 
 if __name__ == "__main__":
