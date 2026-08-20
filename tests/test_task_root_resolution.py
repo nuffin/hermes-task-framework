@@ -54,6 +54,12 @@ class TaskRootResolutionTests(unittest.TestCase):
         module = load_manage_task()
         self.assertEqual(module.TASKS_ROOT, "/tmp/legacy-tasks")
 
+    def test_canonical_root_is_used_when_no_override_or_config_exists(self):
+        os.environ.pop("HERMES_TASKS_ROOT", None)
+        os.environ.pop("HERMES_TASKS_DIR", None)
+        module = load_manage_task()
+        self.assertEqual(module.TASKS_ROOT, str(Path.home() / "studio" / "hermes" / "tasks"))
+
     def test_create_command_uses_root_without_legacy_alias(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             env = os.environ.copy()

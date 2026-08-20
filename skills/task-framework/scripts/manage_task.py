@@ -9,7 +9,7 @@ task-framework 任务生命周期管理工具
   1. HERMES_TASKS_ROOT 或 HERMES_TASKS_DIR 环境变量
   2. 当前 profile config.yaml: tasks.data_dir
   3. 全局 ~/.hermes/config.yaml: tasks.data_dir
-  4. Fallback: ~/.hermes/tasks
+  4. Fallback: ~/studio/hermes/tasks (legacy ~/.hermes/tasks is never populated)
 
 Commands:
     create    创建新任务（目录 + hash + 元数据 + 模板 + 可选 inbox 移入）
@@ -78,8 +78,8 @@ def _resolve_tasks_root() -> str:
             if val and isinstance(val, str):
                 return os.path.expanduser(val)
 
-    # 4. Fallback
-    return os.path.expanduser("~/.hermes/tasks")
+    # 4. Canonical fallback. Never populate the legacy ~/.hermes/tasks root.
+    return os.path.expanduser("~/studio/hermes/tasks")
 
 
 TASKS_ROOT = _resolve_tasks_root()

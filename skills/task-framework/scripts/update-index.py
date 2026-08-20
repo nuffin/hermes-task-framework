@@ -7,7 +7,7 @@ Regenerates both:
   2. tasks/TASKS.md   — aggregated checklist view (deep overview)
 
 Usage:
-  python3 scripts/update-index.py                     # default: $HERMES_TASKS_ROOT (or ~/.hermes/tasks)
+  python3 scripts/update-index.py                     # default: configured root or ~/studio/hermes/tasks
   python3 scripts/update-index.py --tasks-dir /path   # custom path
 """
 
@@ -61,8 +61,8 @@ def _resolve_tasks_root() -> str:
             if val and isinstance(val, str):
                 return os.path.expanduser(val)
 
-    # 4. Fallback
-    return os.path.expanduser("~/.hermes/tasks")
+    # 4. Canonical fallback. Never populate the legacy ~/.hermes/tasks root.
+    return os.path.expanduser("~/studio/hermes/tasks")
 
 
 TASKS_ROOT = _resolve_tasks_root()

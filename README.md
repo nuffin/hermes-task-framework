@@ -70,7 +70,7 @@ cat $HERMES_TASKS_ROOT/README.md
 
 | Env Var | Default | Purpose |
 |---------|---------|---------|
-| `HERMES_TASKS_ROOT` | `~/studio/hermes/tasks` | Task directory root |
+| `HERMES_TASKS_ROOT` | `~/studio/hermes/tasks` | Task directory root; config `tasks.data_dir` is used when unset. The legacy `~/.hermes/tasks` compatibility directory is never populated or symlinked. |
 
 ## Repositories
 

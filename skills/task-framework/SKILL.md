@@ -33,7 +33,7 @@ tags:
 - operations
 - logging
 - pdf
-version: 1.1.0
+version: 1.2.1
 ---
 
 ---
@@ -134,11 +134,11 @@ This skill uses environment variables for portability across machines. After ins
 source ~/.hermes/env.sh
 ```
 
-If the variable is unset, fall back to `~/.hermes/tasks` (the historical default).
+Root resolution order is: `HERMES_TASKS_ROOT`, `HERMES_TASKS_DIR` compatibility alias, active-profile `tasks.data_dir`, global `tasks.data_dir`, then `~/studio/hermes/tasks`. The historical `~/.hermes/tasks` directory is compatibility-only: never create, mirror, populate, or symlink task directories there. When a custom `tasks.data_dir` is configured, it is the only task root used.
 
 ## Task Directory Structure
 
-The canonical tasks root is defined by `$HERMES_TASKS_ROOT` (default: `~/.hermes/tasks/`). All relative paths (e.g. `tasks/YYYYMMDD-*`) in documentation are relative to this root. When the user says "tasks" without qualification, this directory is the default reference — not the abstract concept of "任务". "创建一个任务" means creating a `YYYYMMDD-HHMMSS.<name>-<hash6>/` structure here using this skill.
+The canonical tasks root is defined by `$HERMES_TASKS_ROOT` or configuration (default: `~/studio/hermes/tasks/`). All relative paths (e.g. `tasks/YYYYMMDD-*`) in documentation are relative to this root. When the user says "tasks" without qualification, this directory is the default reference — not the abstract concept of "任务". "创建一个任务" means creating a `YYYYMMDD-HHMMSS.<name>-<hash6>/` structure here using this skill. Task directories must be real directories; do not create task-root or task-directory symlinks.
 
 🔴 **Semantic disambiguation (important):** When the user says "任务" or "task", first determine whether they mean (a) a task-framework managed task (in `tasks/YY.../` directories) or (b) a generic concept. Clues: specific name/timestamp, operating on a task directory → (a); abstract discussion → (b). For (a), always use task-framework tools (task_create, task_set_status, etc.) — never raw `mv`/`cp`/`rm` on task directories. For (b), handle as normal conversation.
 
