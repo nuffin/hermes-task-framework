@@ -53,8 +53,8 @@ def _resolve_tasks_root() -> str:
             if val and isinstance(val, str):
                 return os.path.expanduser(val)
 
-    # 4. Fallback
-    return os.path.expanduser("~/.hermes/tasks")
+    # 4. Canonical fallback. Never create a separate ~/.hermes/tasks root.
+    return os.path.expanduser("~/studio/hermes/tasks")
 
 
 TASKS_ROOT = _resolve_tasks_root()

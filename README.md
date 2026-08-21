@@ -20,33 +20,32 @@ trackable task directories — cross-session, cross-profile, cross-machine.
 | `compact-directory-memory` | Storage: flat/hierarchical MEMORY.md + CHANGELOG.md formats and tooling |
 | `task-tracker` | Bookkeeping: TASK.md checkbox updates, CHANGELOG.md append, index refresh |
 | `task-timestamp-convention` | Naming conventions: local-time timestamps, self-explanatory names |
+| `task-lifecycle-discipline` | Safe lifecycle: find-before-create, rename/delete cascades, index consistency |
+| `task-aware-project-work` | Load canonical root/subsystem task context before project work |
+| `task-artifact-integrity` | Validate context closure, artifacts, references, and relocation |
+| `task-archaeology` | Recover missing session context from task artifacts |
+| `task-cross-machine-sync` | Configurable Git synchronization of a task root |
 | `task-lifecycle-edge-cases` | Recovery: TASK.md resurrection from artifacts |
 | `task-lifecycle-portability` | Export/import/migration between machines via tar.gz or zip |
 | `task-external-repos-pattern` | Cloning external git repos into task directories for analysis |
 
-## Install
+## Discovery with skill-graph
 
-```bash
-git clone https://github.com/nuffin/task-framework.git
-cd task-framework
-./install.sh              # copy to ~/.hermes/skills/software-development/
-./install.sh --symlink    # symlink for development
-```
-
-Or via pip:
-
-```bash
-pip install hermes-task-framework
-```
-
-Add to skill-graph source_dirs in `config.yaml`:
+Add the repository's `skills/` directory directly to `source_dirs`:
 
 ```yaml
 skills:
   config:
     skill-graph:
       source_dirs:
-        - ~/.hermes/skills/software-development/
+        - ~/path/to/hermes-task-framework/skills
+```
+
+Then use `skill_graph_search()` and `skill_load()`. No symlink, placeholder skill, or copy into `~/.hermes/skills/` is required. Package installation remains optional for environments that do not use skill-graph.
+
+```bash
+# Optional legacy/package distribution
+pip install hermes-task-framework
 ```
 
 ## Quick Start
@@ -55,10 +54,8 @@ Create a task:
 
 ```bash
 source ~/.hermes/personal/env.sh
-TS=$(date +%Y%m%d-%H%M%S)
-HASH=$(python3 -c "import secrets; print(secrets.token_hex(3))")
-DIR="$HERMES_TASKS_ROOT/${TS}.my-analysis-${HASH}"
-mkdir -p "$DIR/output/docs" "$DIR/output/logs"
+python3 skills/task-framework/scripts/manage_task.py create my-analysis \
+  --desc "Analyze the requested material"
 ```
 
 List all tasks:

@@ -1,115 +1,66 @@
 ---
 author: Hermes Agent
 category: software-development
-description: Task migration, export/import, and file-protection model. Covers tar.gz and zip
-  snapshots and manage.py lifecycle commands (export/import/rebuild).
+description: Export, import, and rebuild self-contained task snapshots without mirrors or symlinks.
 license: MIT
 metadata:
   hermes:
-    scenes:
-    - hermes
-    - devops
-    tags:
-    - software-development
-    - task-migration
-    - export-import
-    - file-protection
-    - python
-    - hermes
+    scenes: [hermes, devops]
+    tags: [task-framework, portability, export, import, snapshots, recovery]
+    relations:
+    - type: depends_on
+      target: task-artifact-integrity
+      properties: {reason: snapshots must preserve and verify the complete task closure, strength: strong}
 name: task-lifecycle-portability
-platforms:
-- linux
-- macos
-version: 1.0.0
+platforms: [linux, macos]
+version: 2.0.0
 ---
 
+# Task Lifecycle Portability
 
-# Task Lifecycle & Portability
+Owns one-task snapshot transport. Task creation, status, rename, retirement, and deletion belong to the lifecycle layer; damaged-file reconstruction belongs to `task-lifecycle-edge-cases`.
 
-Manages task portability between machines and protects task metadata from destructive cleanup.
+## Storage contract
 
-## File Protection Model
+The task directory is the only source of truth. Canonical files are real files; there is no per-profile/per-hash mirror, symlink protection, or relink command.
 
-All task files live directly in the task directory — no mirror directories, no symlinks. The task directory is the single source of truth.
+- `input/` contains source material and is never cleaned.
+- `output/` contains generated evidence and is cleared only by explicit hard reset.
+- Root MEMORY/CHANGELOG and `memories/` are persistent context.
 
-**Protection guarantees:**
-- `rm -rf output/` only touches generated files; metadata files (TASK.md, CHANGELOG.md, .hermes-task.json) in the task root and user files in `input/` are safe
-- Pipeline exclusion-based cleanup can't reach task metadata
-- All task files are in one place, making export/import straightforward
+## Commands
 
-## Cleanup Discipline
+From the task-framework skill directory:
 
-**Only `output/` is safe to delete:**
-- `task_reset --hard` = `rm -rf output/` + reset checkbox
-- Never use exclusion-based deletion (`find . -not -name 'X' -delete` or positive-listing `rm -rf tts-*/ RECORDING.md ...`) — these always miss something or catch too much
-- All generated files (RECORDING.md, COMPOSITING.md, IMAGE_SLIDESHOW.md, SUBTITLE_SPEC.md, phase directories, logs) live in `output/`
-
-## Directory Boundary
-
-```
-tasks/<ts>.<name>-<hash6>/
-├── TASK.md
-├── CHANGELOG.md
-├── .hermes-task.json
-├── input/               ← SOURCE: user-provided, NEVER delete
-└── output/              ← GENERATED: pipeline owns this, safe to rm -rf
+```bash
+python3 scripts/manage_task.py export <hash-or-dir>
+python3 scripts/manage_task.py import <archive.tar.gz-or-zip>
+python3 scripts/manage_task.py rebuild <hash>
 ```
 
-## Export / Import / Rebuild
+## Export contract
 
-`manage.py <hash>` commands:
+Current export creates a self-contained tar.gz beside the task directory and includes the complete task except `.git`, including `input/`, `output/`, scripts, metadata, and hierarchical context. Complete evidence is the safe default; output exclusion requires a future explicit, tested option and is not implied.
 
-| Command | What it does |
-|---------|-------------|
-| `export <hash>` | Package task directory as `tasks/<ts>.<name>-<hash>.tar.gz` (excludes `output/`, includes `input/` + metadata files) |
-| `import <tar.gz-or-zip>` | Extract to `tasks/` directory, restore all files |
-| `rebuild <hash>` | Find latest `<hash>.tar.gz` or `<hash>.zip` in `tasks/`, extract. Generates semantic directory name from TASK.md title |
+Before reporting export success:
 
-**Actual script path:**
-`scripts/manage_task.py  # from the task-framework skill directory`
+1. Run task artifact audit.
+2. Confirm archive members are contained under one task directory.
+3. Confirm canonical files and context pairs are present.
+4. Record archive path and checksum.
 
-Usage: `python3 <path> <command> <arg>`
+## Import/rebuild contract
 
-**Export behavior:**
-- Archive contains actual file content (no symlinks involved)
-- Output dir is excluded (it's regenerable via pipeline)
-- `tar.gz` and `zip` act as portable backups that can be committed to git
+- Accept tar.gz or zip only after archive path traversal checks.
+- Refuse overwrite when the destination task exists.
+- Restore real files, never symlinks or mirrors.
+- Verify task identity/hash and complete context after extraction.
+- Regenerate indexes after successful import.
 
-**Cross-machine strategy:**
-- No automatic merge — each machine's copy is an independent task
-- To combine work from two machines: create a new task referencing both via `ref:<hash>/...`
-- `tar.gz` or `zip` in git repo acts as backup
+`rebuild` locates a matching snapshot and delegates to import. Ambiguous snapshots must be reported rather than silently selecting the wrong task.
 
-## Old Tasks (Migration)
+## Cross-machine choice
 
-- Tasks already in `input/` + `output/` model: use `manage_task.py init` for initial setup
-- Legacy flat tasks (REQUIREMENTS.md + images/ at root, no input/output): migrate if feasible; abandon if too old
-- When you discover TASK.md is missing: **regenerate immediately from CHANGELOG.md + directory artifacts**, do not skip or defer
+Use this skill for one-task/offline transfer. Use `task-cross-machine-sync` for an explicitly configured shared Git task root.
 
-## TASK.md Recovery (Edge Cases)
-
-See `references/task-recovery-procedure.md` for the full step-by-step TASK.md recovery process when the file is missing or corrupted. Key principles:
-
-1. **Check the task directory** — verify if TASK.md exists in the task directory; if corrupted, reconstruct from CHANGELOG.md + artifacts
-2. **Identify task type** — scan for signature files (REQUIREMENTS.md + RECORDING.md etc.) and load the task-type's governing skill for its defined phase structure
-3. **Map evidence to phases** — cross-reference output directories, `.hermes-task.json` outputs, and CHANGELOG.md against the skill's phase templates
-4. **Write TASK.md** following the skill's template — don't invent phases, don't reorder
-
-🔴 Critical: Do NOT guess phase structure from memory. Load the domain skill that governs this task type and use its defined phases. Verify each phase's output file exists before marking complete.
-
-**Real-world example:** `references/task-recovery-<hash6>-example.md` — step-by-step walkthrough of recovering <hash6>'s TASK.md after it was lost to exclusion-based cleanup.
-
-## Pipeline Output Model (Design)
-
-See `references/output-model-design.md` for the full 2026-06-11 design rationale. The core decisions:
-
-- **Output isolation**: All generated artifacts in `output/`, user materials in `input/`
-- **Cleanup strategy**: `rm -rf output/` — never exclusion-based deletion
-- **File protection**: Metadata files (TASK.md, CHANGELOG.md, .hermes-task.json) live directly in task directory — single source of truth
-- **Manage tool**: `manage_task.py` with `init/export/import/rebuild/relink/reindex` commands
-
-**Implementation:** `references/pipeline-output-transition.md` — detailed diff of what changed in pipeline.py to adopt the output/ model.
-
-## Pitfalls
-| `ref:` resolution breaks when hash-only (no directory match) | `.hermes-task.json` outputs should use `ref:hash/output_name` format. Directory must contain the hash in its name for `ref:` glob resolution. |
-| Pipeline writes spec files to task root instead of output/ | All generated specs (RECORDING.md, COMPOSITING.md, IMAGE_SLIDESHOW.md, SUBTITLE_SPEC.md) belong in `output/`. Update pipeline scripts if they write to root. |
+See `references/output-model-design.md` for the canonical input/output boundary.

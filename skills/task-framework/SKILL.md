@@ -31,6 +31,11 @@ metadata:
       properties:
         reason: owns MEMORY.md/CHANGELOG.md formats and hierarchical directory context
         strength: strong
+    - type: complemented_by
+      target: task-lifecycle-discipline
+      properties:
+        reason: owns find-before-create, rename, delete, and lifecycle safety policy
+        strength: strong
 name: task-framework
 platforms:
 - linux
@@ -44,7 +49,7 @@ tags:
 - operations
 - logging
 - pdf
-version: 1.3.0
+version: 1.4.0
 ---
 
 ---
@@ -606,6 +611,8 @@ For the full generated index (README.md + TASKS.md), see [Root Index Files](#roo
 
 Create a new task with timestamped directory. **After creation, show the user the README + checklist. Do NOT fill in placeholder content based on prior conversation.**
 
+Before creation, load `task-lifecycle-discipline` and use `task_api.py search` to confirm an equivalent task does not already exist. Do not hand-generate directories, hashes, or metadata. The former `task-initialization-sequence` and `task-create-first` rules are absorbed here and are no longer standalone workflows.
+
 **Base flow (scripted):**
 
 ```bash
@@ -878,7 +885,8 @@ Simple scripts go directly under `scripts/`:
 
 ```
 scripts/
-├── manage_task.py             ← 生命周期管理（create/accept/decline/status/view/reset + init/export/import/rebuild/reindex/list/migrate）
+├── manage_task.py             ← 生命周期管理（create/accept/decline/status/view/reset + init/export/import/rebuild/reindex/list）
+├── task_api.py                ← stable JSON interface for PS/Kanban/ticket/project adapters
 ├── task-runner.sh             ← logging wrapper
 ├── update-index.py            ← regenerate README.md + TASKS.md
 ├── task_ref.py                ← ref: 解析 + 循环依赖检测
@@ -902,6 +910,20 @@ For complex tools that span multiple files (a multi-step data pipeline, a paper 
 ```
 
 The entry point (`run.sh` or `main.py`) should be the only file referenced from the operation's section in SKILL.md. The supporting files live alongside it.
+
+## Stable Adapter API (`task_api.py`)
+
+External project/ticket/Kanban/profile adapters must use the JSON API instead of parsing task directory names or editing `.hermes-task.json` directly:
+
+```bash
+python3 scripts/task_api.py describe <hash-or-name>
+python3 scripts/task_api.py search "<terms>"
+python3 scripts/task_api.py get-meta <task> [key]
+python3 scripts/task_api.py get-extension <task> <namespace> [key]
+python3 scripts/task_api.py set-extension <task> <namespace> <key> '<json-value>'
+```
+
+Core metadata is read-only through this adapter surface. Writes are namespaced under `.hermes-task.json.extensions.<namespace>` to prevent PS/Kanban/ticket integrations from overwriting lifecycle fields.
 
 ## Task Lifecycle Management (`manage_task.py`)
 
@@ -943,9 +965,6 @@ python3 scripts/manage_task.py import tasks/<ts>.<task-name>-<hash6>.tar.gz
 
 # 按 hash 重建（查找最近 tar.gz）
 python3 scripts/manage_task.py rebuild <hash6>
-
-# 一次性迁移：将旧个人存储目录下的文件迁移到统一目录
-python3 scripts/manage_task.py migrate
 
 # 全量注册所有现有任务
 python3 scripts/manage_task.py ensure-all

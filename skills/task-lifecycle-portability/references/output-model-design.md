@@ -1,55 +1,26 @@
-# Pipeline Output Model Design (resolved 2026-06-11)
+# Canonical task input/output model
 
-## Problem
-
-Pipeline cleanup using exclusion-based deletion (`find ... -not -name X -exec rm`) or positive-listing always either misses cleanup targets or accidentally deletes user files. Task-framework metadata files (TASK.md, CHANGELOG.md, .hermes-task.json) mixed with pipeline artifacts in the same directory — cleanup couldn't distinguish them.
-
-## Solution
-
-### Directory isolation
-
-All generated artifacts go into `output/` subdirectory; `input/` holds user source materials:
-
-```
-tasks/<ts>.<name>-<hash6>/
+```text
+<task>/
 ├── TASK.md
+├── README.md
+├── MEMORY.md
 ├── CHANGELOG.md
 ├── .hermes-task.json
-├── input/
-│   ├── REQUIREMENTS.md
-│   └── images/
-└── output/
-    ├── tts-<hash6>/
-    ├── RECORDING.md
-    ├── COMPOSITING.md
-    └── compositing-<hash6>/output.mp4
+├── memories/                 # optional hierarchical persistent context
+├── input/                    # source material; cleanup must never touch
+├── output/                   # generated artifacts; hard reset may clear
+└── scripts/                  # task-owned reusable execution/verification
 ```
 
-### Cleanup strategy
+Canonical files are real files in the task directory. There is no mirror directory, metadata symlink, or relink operation.
 
-```bash
-# pipeline.py --clean
-rm -rf output/
+## Cleanup
 
-# task_reset --hard
-rm -rf output/ + reset checkboxes
-```
+- Hard reset removes and recreates only `output/`, resets non-DONE checkboxes, and preserves input/context/metadata/scripts.
+- Pipelines write generated specifications and phase outputs under `output/`.
+- Never use exclusion-based deletion at task root.
 
-Both entry points clean `output/` uniformly, never conflicting.
+## Snapshot
 
-### File protection
-
-Three core files (TASK.md, CHANGELOG.md, .hermes-task.json) live directly in the task directory. The task directory is the single source of truth — no mirror directories, no symlinks. A `rm -rf` of the entire task directory removes all task files irreversibly.
-
-### Manage tool
-
-`manage_task.py` commands (in task-framework skill's `scripts/`):
-
-| Command | Action |
-|---------|--------|
-| `init <hash>` | Create per-hash directory + three symlinks |
-| `export <hash>` | Package tar.gz (dereference symlinks) |
-| `import <file>` | Restore from tar.gz |
-| `rebuild <hash>` | Find hash tar.gz and import |
-| `relink <hash>` | Rebuild symlinks |
-| `reindex` | Rebuild tasks index |
+A full portability snapshot includes input, output, scripts, metadata, and context unless an explicit future option defines and verifies a narrower contract.

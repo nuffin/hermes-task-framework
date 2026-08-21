@@ -83,6 +83,28 @@ class TaskRootResolutionTests(unittest.TestCase):
             self.assertIn("Task identity: root-only-test", memory)
             self.assertNotIn("# MEMORY", memory)
 
+    def test_create_rejects_exact_duplicate_unless_explicitly_allowed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            env = os.environ.copy()
+            env["HERMES_TASKS_ROOT"] = temp_dir
+            first = subprocess.run(
+                [sys.executable, str(SCRIPT), "create", "duplicate-test"],
+                env=env, capture_output=True, text=True,
+            )
+            self.assertEqual(first.returncode, 0)
+            rejected = subprocess.run(
+                [sys.executable, str(SCRIPT), "create", "duplicate-test"],
+                env=env, capture_output=True, text=True,
+            )
+            self.assertEqual(rejected.returncode, 1)
+            self.assertIn("already exists", rejected.stdout)
+            allowed = subprocess.run(
+                [sys.executable, str(SCRIPT), "create", "duplicate-test", "--allow-duplicate"],
+                env=env, capture_output=True, text=True,
+            )
+            self.assertEqual(allowed.returncode, 0)
+            self.assertEqual(len(list(Path(temp_dir).glob("*.duplicate-test-*"))), 2)
+
     def test_import_accepts_zip_archive(self):
         module = load_manage_task()
         with tempfile.TemporaryDirectory() as temp_dir:

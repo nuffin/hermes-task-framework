@@ -24,7 +24,6 @@ Commands:
     export    将任务打包为可移植 tar.gz
     import    从 tar.gz 或 zip 恢复任务
     rebuild   按 hash 查找最近 tar.gz 或 zip 并导入
-    migrate   一次性迁移：将旧存储目录下的文件迁移到统一目录
     ensure-all 全量注册所有现有任务
 """
 import os, sys, glob, json, shutil, re, tarfile, zipfile, tempfile, hashlib, random, argparse, secrets
@@ -512,48 +511,6 @@ def cmd_list():
     return True
 
 
-def cmd_migrate():
-    """One-shot migration: copy files from old personal storage to task dir."""
-    old_root = os.path.expanduser("~/.hermes/tasks")
-    if not os.path.isdir(old_root):
-        print("No old personal/tasks directory to migrate from.")
-        return True
-
-    migrated = 0
-    for hd_name in os.listdir(old_root):
-        hd = os.path.join(old_root, hd_name)
-        if not os.path.isdir(hd) or not re.match(r'^[a-z0-9]{6}$', hd_name):
-            continue
-        h = hd_name
-        task_dir = _find_task_dir_by_hash(h)
-        if not task_dir:
-            # Create new task dir
-            task_dir = os.path.join(TASKS_ROOT, _suggest_dir_name(h))
-            os.makedirs(task_dir, exist_ok=True)
-
-        # Copy files from old mirror to task dir, if task dir doesn't already have them
-        for old_name, new_name in [
-            ("task.md", "TASK.md"),
-            ("memory.md", "CHANGELOG.md"),
-            ("meta.json", ".hermes-task.json"),
-        ]:
-            src = os.path.join(hd, old_name)
-            dst = os.path.join(task_dir, new_name)
-            if os.path.exists(src):
-                # Symlinks pass os.path.exists — check explicitly so we don't skip
-                if os.path.islink(dst):
-                    os.remove(dst)
-                if not os.path.exists(dst):
-                    shutil.copy2(src, dst)
-                    print(f"  {old_name} -> {new_name}")
-
-        migrated += 1
-
-    cmd_reindex()
-    print(f"\nMigrated {migrated} tasks from {old_root}")
-    return True
-
-
 def cmd_ensure_all():
     task_dirs = _find_all_task_dirs()
     for d in task_dirs:
@@ -566,13 +523,33 @@ def cmd_ensure_all():
 
 # ── create / accept / decline ─────────────────────────────────────
 
-def cmd_create(name, from_inbox=None, description=None):
+def _exact_name_matches(slug):
+    matches = []
+    for task_dir in _find_all_task_dirs():
+        meta_path = os.path.join(task_dir, ".hermes-task.json")
+        try:
+            meta = json.load(open(meta_path)) if os.path.exists(meta_path) else {}
+        except (OSError, json.JSONDecodeError):
+            meta = {}
+        if meta.get("name") == slug or re.search(rf"\.{re.escape(slug)}-[a-z0-9]{{6}}$", task_dir):
+            matches.append(task_dir)
+    return matches
+
+
+def cmd_create(name, from_inbox=None, description=None, allow_duplicate=False):
     """Create a new task: directory + hash + meta + templates + (optional inbox file/dir move)."""
-    h = hash6()
-    ts = datetime.now().strftime('%Y%m%d-%H%M%S')
     slug = re.sub(r'[^a-z0-9-]', '', name.lower().replace(' ', '-')).strip('-')
     if not slug:
         slug = 'task'
+    duplicates = _exact_name_matches(slug)
+    if duplicates and not allow_duplicate:
+        print(f"Task with exact name already exists: {slug}")
+        for duplicate in duplicates:
+            print(f"  {duplicate}")
+        print("Use --allow-duplicate only when a separate task is intentional.")
+        return False
+    h = hash6()
+    ts = datetime.now().strftime('%Y%m%d-%H%M%S')
     dir_name = f"{ts}.{slug}-{h}"
     task_dir = os.path.join(TASKS_ROOT, dir_name)
     os.makedirs(task_dir, exist_ok=True)
@@ -802,7 +779,7 @@ new commands:
 """)
     parser.add_argument('action', choices=[
         'init', 'export', 'import', 'rebuild',
-        'reindex', 'list', 'migrate', 'ensure-all',
+        'reindex', 'list', 'ensure-all',
         'create', 'accept', 'decline', 'status', 'view', 'reset'
     ])
     parser.add_argument('args', nargs='*', default=[], help='positional args for the action')
@@ -810,6 +787,8 @@ new commands:
                         help='(create) inbox file or directory to move into input/')
     parser.add_argument('--desc', dest='description', default=None,
                         help='(create) task goal / description text')
+    parser.add_argument('--allow-duplicate', action='store_true', default=False,
+                        help='(create) bypass exact-name duplicate prevention')
     parser.add_argument('--name', dest='task_name', default=None,
                         help='(accept) override auto-derived task name')
     parser.add_argument('--reason', dest='reason', default='',
@@ -825,9 +804,9 @@ new commands:
         'rebuild':    lambda: cmd_rebuild(args.args[0]) if args.args else False,
         'reindex':    cmd_reindex,
         'list':       cmd_list,
-        'migrate':    cmd_migrate,
+
         'ensure-all': cmd_ensure_all,
-        'create':     lambda: cmd_create(args.args[0], from_inbox=args.from_inbox, description=args.description) if args.args else False,
+        'create':     lambda: cmd_create(args.args[0], from_inbox=args.from_inbox, description=args.description, allow_duplicate=args.allow_duplicate) if args.args else False,
         'accept':     lambda: cmd_accept(args.args[0], name=args.task_name) if args.args else False,
         'decline':    lambda: cmd_decline(args.args[0], reason=args.reason) if args.args else False,
         'status':     lambda: cmd_status(args.args[0], args.args[1], reason=args.reason) if len(args.args) >= 2 else False,

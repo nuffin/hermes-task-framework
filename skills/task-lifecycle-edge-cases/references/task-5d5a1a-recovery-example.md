@@ -1,66 +1,19 @@
-# Task Recovery: <task-name> (<hash6>)
+# Task recovery evidence example
 
-Task: `<ts>.<task-name>-<hash6>`
+A task was found without a usable TASK.md after an unsafe cleanup.
 
-## How TASK.md was lost (historical)
+## Evidence used
 
-1. Original TASK.md existed on June 7 with full 76-line checklist
-2. During pipeline bug fixing, exclusion-based cleanup was used (instead of `rm -rf output/`)
-3. TASK.md was accidentally caught in the cleanup
-4. Discovered missing on June 10 — agent noted it was gone but did NOT regenerate
-5. Remained missing until June 11 when user explicitly asked for it
+1. `.hermes-task.json` established identity, outputs, and relationships.
+2. Root MEMORY and CHANGELOG established durable facts and chronological state.
+3. `input/`, `output/`, and scripts established available source and generated evidence.
+4. The governing task type/skill supplied the valid phase structure.
+5. Only phases with matching artifacts and verification were marked complete.
 
-## Recovery process (June 11)
+## Recovery result
 
-1. Searched filesystem — no TASK.md found in task directory
-2. Read REQUIREMENTS.md → extracted timeline, language, viewport
-3. Read CHANGELOG.md (was already a symlink, content preserved) → knew last state (completed)
-4. Listed directory contents → found all phase dirs (tts-6d3e4c, compositing-6d3e4c, etc.)
-5. Read `.hermes-task.json` → outputs mapping confirmed all phases done
-6. Loaded `<domain-skill>` skill → got canonical phase decomposition
-7. Compared first draft against skill's template:
-   - Missing Phase 2 (timeline-composer)
-   - Wrong phase order (TTS→record→cover→subtitle instead of parallel)
-   - Extra phases (subtitle-compositing, timeline-chart-preview are subsumed by composite)
-8. Fixed TASK.md to match skill's phase structure, all items marked [x]
-
-## Subsequent migration to symlink + output/ model
-
-After recovery, the task was migrated to the new structure:
-
-```
-tasks/<ts>.<name>-<hash6>/
-├── TASK.md
-├── CHANGELOG.md
-├── .hermes-task.json
-├── input/               ← REQUIREMENTS.md + images/
-└── output/              ← all generated files
-```
-
-Migration commands:
-```bash
-# Initialize task metadata
-python3 manage_task.py init <hash6>
-
-# Move user source files to input/
-mkdir -p input && mv REQUIREMENTS.md input/ && mv images/ input/
-
-# Move generated files to output/
-mkdir -p output && mv RECORDING.md COMPOSITING.md IMAGE_SLIDESHOW.md output/
-mv tts-*/ image-slideshow-*/ subtitle-gen-*/ browser-video-recording-*/ output/
-
-# Verify clean worked
-python3 pipeline.py --clean  # only removes output/, leaves input/ + metadata files
-
-# Re-export (now clean, no output/ in archive)
-python3 manage_task.py export <hash6>
-# → tar.gz contains: input/ + metadata files only
-```
-
-## Lessons
-
-- When you discover TASK.md is missing: regenerate IMMEDIATELY, don't defer
-- Always verify recovered TASK.md against the governing skill's phase template
-- Files live directly in the task directory — no symlinks, no mirror storage
-- Pipeline cleanup MUST use output/ boundary, never exclusion-based deletion
-- `manage_task.py init <hash>` creates TASK.md + CHANGELOG.md + .hermes-task.json
+- Canonical TASK.md was reconstructed as a real file in the task root.
+- Missing MEMORY/CHANGELOG files were restored according to compact-directory-memory.
+- Hierarchical subsystem pairs were verified when present.
+- Indexes were regenerated.
+- No mirror, symlink, relink, or profile-local task copy was created.
