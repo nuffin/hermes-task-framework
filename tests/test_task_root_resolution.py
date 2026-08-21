@@ -77,6 +77,11 @@ class TaskRootResolutionTests(unittest.TestCase):
             created = list(Path(temp_dir).glob("*.root-only-test-*"))
             self.assertEqual(len(created), 1)
             self.assertTrue((created[0] / ".hermes-task.json").exists())
+            for required in ("TASK.md", "README.md", "MEMORY.md", "CHANGELOG.md"):
+                self.assertTrue((created[0] / required).is_file(), required)
+            memory = (created[0] / "MEMORY.md").read_text(encoding="utf-8")
+            self.assertIn("Task identity: root-only-test", memory)
+            self.assertNotIn("# MEMORY", memory)
 
     def test_import_accepts_zip_archive(self):
         module = load_manage_task()

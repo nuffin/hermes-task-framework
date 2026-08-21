@@ -20,7 +20,7 @@ Commands:
     reset     重置任务（清 output/、重置 checkbox、重设状态）
     list      列出所有任务（直接扫描目录）
     reindex   重建索引文件（README.md + TASKS.md）
-    init      为任务创建目录 + TASK.md + CHANGELOG.md + .hermes-task.json
+    init      为任务创建目录 + TASK.md + MEMORY.md + CHANGELOG.md + .hermes-task.json
     export    将任务打包为可移植 tar.gz
     import    从 tar.gz 或 zip 恢复任务
     rebuild   按 hash 查找最近 tar.gz 或 zip 并导入
@@ -167,7 +167,8 @@ def _ensure_task_files(task_dir, h):
     os.makedirs(task_dir, exist_ok=True)
 
     task_f = os.path.join(task_dir, "TASK.md")
-    mem_f = os.path.join(task_dir, "CHANGELOG.md")
+    memory_f = os.path.join(task_dir, "MEMORY.md")
+    changelog_f = os.path.join(task_dir, "CHANGELOG.md")
     meta_f = os.path.join(task_dir, ".hermes-task.json")
 
     if not os.path.exists(task_f):
@@ -175,10 +176,16 @@ def _ensure_task_files(task_dir, h):
             f.write("# Task: --\n\n## Status\n\nactive\n\n## Goal\n\n\n## Checklist\n\n")
         print(f"  Created: {task_f}")
 
-    if not os.path.exists(mem_f):
-        with open(mem_f, 'w') as f:
+    if not os.path.exists(memory_f):
+        memory_tmpl = _load_template('MEMORY.md')
+        with open(memory_f, 'w') as f:
+            f.write(memory_tmpl or f"Task identity: {h}.\n")
+        print(f"  Created: {memory_f}")
+
+    if not os.path.exists(changelog_f):
+        with open(changelog_f, 'w') as f:
             f.write(f"# CHANGELOG.md -- {h}\n\n")
-        print(f"  Created: {mem_f}")
+        print(f"  Created: {changelog_f}")
 
     if not os.path.exists(meta_f):
         with open(meta_f, 'w') as f:
@@ -202,7 +209,7 @@ def _ensure_task_files(task_dir, h):
         dp = os.path.join(task_dir, d)
         os.makedirs(dp, exist_ok=True)
 
-    return task_f, mem_f, meta_f
+    return task_f, memory_f, changelog_f, meta_f
 
 
 # ── safe file moves (cp + verify + rm, never raw mv) ──
@@ -616,6 +623,14 @@ def cmd_create(name, from_inbox=None, description=None):
         cl_content = f"# CHANGELOG.md -- {h}\n"
     with open(os.path.join(task_dir, 'CHANGELOG.md'), 'w') as f:
         f.write(cl_content)
+
+    # MEMORY.md from template — stable cross-session facts, separate from the log
+    memory_tmpl = _load_template('MEMORY.md')
+    memory_content = memory_tmpl or f"Task identity: {slug} ({h}).\n"
+    memory_content = memory_content.replace(
+        '<task name and hash>', f'{slug} ({h})')
+    with open(os.path.join(task_dir, 'MEMORY.md'), 'w') as f:
+        f.write(memory_content)
 
     # README.md
     readme_content = f"# {slug}\n\nTask hash: {h}\n\n{description or ''}\n"

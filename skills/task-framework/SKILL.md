@@ -20,6 +20,17 @@ metadata:
     - tooling
     - logging
     - pdf
+    relations:
+    - type: depends_on
+      target: task-context-storage
+      properties:
+        reason: defines which persistence layer owns task context
+        strength: strong
+    - type: depends_on
+      target: compact-directory-memory
+      properties:
+        reason: owns MEMORY.md/CHANGELOG.md formats and hierarchical directory context
+        strength: strong
 name: task-framework
 platforms:
 - linux
@@ -33,7 +44,7 @@ tags:
 - operations
 - logging
 - pdf
-version: 1.2.1
+version: 1.3.0
 ---
 
 ---
@@ -142,7 +153,7 @@ The canonical tasks root is defined by `$HERMES_TASKS_ROOT` or configuration (de
 
 🔴 **Semantic disambiguation (important):** When the user says "任务" or "task", first determine whether they mean (a) a task-framework managed task (in `tasks/YY.../` directories) or (b) a generic concept. Clues: specific name/timestamp, operating on a task directory → (a); abstract discussion → (b). For (a), always use task-framework tools (task_create, task_set_status, etc.) — never raw `mv`/`cp`/`rm` on task directories. For (b), handle as normal conversation.
 
-```\ntasks/\n├── README.md                  ← summary index (directory façade)\n├── TASKS.md                   ← aggregated checklist view (done/total per task)\n├── YYYYMMDD-HHMMSS.<task-name>-<hash6>/\n│   ├── README.md              ← goal, scope, key findings\n│   ├── TASK.md                ← checklist with status + checkboxes\n│   ├── CHANGELOG.md          ← per-task changelog: auto-appended log of decisions, state, findings\n│   ├── MEMORY.md               ← compact §-delimited durable facts (ports, rules, constraints). REQUIRED to maintain — see your memory management skill (if available) for format and trigger rules.
+```\ntasks/\n├── README.md                  ← summary index (directory façade)\n├── TASKS.md                   ← aggregated checklist view (done/total per task)\n├── YYYYMMDD-HHMMSS.<task-name>-<hash6>/\n│   ├── README.md              ← goal, scope, key findings\n│   ├── TASK.md                ← checklist with status + checkboxes\n│   ├── CHANGELOG.md           ← per-task chronological decisions, state, and findings\n│   ├── MEMORY.md              ← compact §-delimited durable facts; REQUIRED\n│   ├── memories/              ← optional for long-running multi-subsystem tasks\n│   │   └── <sub-system>/\n│   │       ├── MEMORY.md      ← stable subsystem facts and constraints\n│   │       └── CHANGELOG.md   ← subsystem operations, decisions, and verification
 │   ├── input/                 ← **source files** — NEVER deleted by cleanup operations\n│   │                           (PDF, DOCX, images, REQUIREMENTS.md copied from inbox)\n│   ├── output/                ← **generated files** — CAN be safely deleted entirely\n│   │   ├── docs/              ← analysis documents, reports (for analysis tasks)\n│   │   ├── logs/              ← execution logs\n│   │   ├── tts-<hash6>/       ← pipeline phase dirs (for pipeline tasks)\n│   │   ├── RECORDING.md       ← pipeline generated specs\n│   │   ├── COMPOSITING.md\n│   │   └── ...\n│   ├── inbox/                 ← proposal inbox (one file/dir per idea)\n│   └── declined/              ← rejected proposals (with DECLINED.md)\n```
 
 **`input/` 目录** — 存放从 inbox 复制来的源文件（PDF、DOCX、图片、REQUIREMENTS.md 等）。**核心规则：所有删除操作不得触及 `input/`。**
@@ -605,7 +616,7 @@ python3 scripts/manage_task.py create <name> [--desc "<goal text>"]
 python3 scripts/manage_task.py create <name> --from-inbox <inbox-file-or-dir>
 ```
 
-The script handles: directory creation (`<ts>.<name>-<hash6>/`), subdirs (`input/ output/docs output/logs scripts/`), `.hermes-task.json`, TASK.md (from `templates/TASK.md`), CHANGELOG.md, README.md, and index regeneration. Inbox source is moved via cp + verify + rm (never raw `mv`).
+The script handles: directory creation (`<ts>.<name>-<hash6>/`), subdirs (`input/ output/docs output/logs scripts/`), `.hermes-task.json`, TASK.md (from `templates/TASK.md`), MEMORY.md, CHANGELOG.md, README.md, and index regeneration. Inbox source is moved via cp + verify + rm (never raw `mv`).
 
 **Post-create steps (agent-driven, not scripted):**
 
@@ -1173,6 +1184,15 @@ check_cycles(meta)  # raises ValueError on cycle
 | `MEMORY.md` | 跨阶段的硬事实（端口、规则、公约） | 手动维护 | §-delimited, compact format; MUST use your memory management skill (if available) for format and trigger rules. Review after every phase completion or session that changes task state. |
 | `logs/` | 命令输出 | 自动生成 | 可清理 |
 | `.hermes-task.json` | hash、outputs、依赖 | 自动维护 | 随任务更新 |
+
+### Hierarchical Task Memory（多子系统任务）
+
+当长期任务跨多个仓库、服务或子系统时：
+
+1. 加载 `task-context-storage`，判断信息应进入全局 memory、任务 MEMORY 还是任务 CHANGELOG。
+2. 加载 `compact-directory-memory`，按其 hierarchical layout 创建、读取、更新和验证根级及 `memories/<sub-system>/` 上下文。
+3. 在 `.hermes-task.json` 中声明 `"memory_layout": "hierarchical"` 和 `"memory_root": "memories"`。
+4. task-framework 只负责编排读写时机和重建任务索引，不复制目录记忆 skill 的格式规则或实现脚本。
 
 ### 读写规则
 
