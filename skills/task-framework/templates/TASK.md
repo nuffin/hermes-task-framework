@@ -73,6 +73,9 @@ active — <brief description of current work>
 
 ## Checklist
 
+<!-- The optional BREAK below is a template placeholder, not a real pause.
+     During concrete planning, delete it or replace it with a specific pause.
+     It must not block the first concrete dependency-ready checklist item. -->
 - [ ] Phase 1 — <investigation / reading / understanding>
 - [ ] Phase 2 — <execution / writing / implementation>
 - [ ] BREAK: <optional — delete if no pause needed here>

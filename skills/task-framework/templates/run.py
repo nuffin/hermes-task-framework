@@ -9,8 +9,8 @@ Usage:
 
 Auto mode (no args):
     1. Read TASK.md checklist, find first unchecked item
-    2. If it's a BREAK, mark it done, continue to next Phase(s)
-    3. Execute Phase(s) until next BREAK or end of list
+    2. Ignore the literal optional template BREAK; stop at a concrete BREAK
+    3. Execute Phase(s) until the next concrete BREAK or end of list
 """
 
 import sys, os, subprocess, re
@@ -112,6 +112,10 @@ def is_break(text):
     return text.strip().startswith("BREAK")
 
 
+def is_template_break(text):
+    return text.strip() == "BREAK: <optional — delete if no pause needed here>"
+
+
 # ── Auto mode ──
 
 def run_auto():
@@ -124,21 +128,17 @@ def run_auto():
     idx, txt = unchecked[0]
     print(f"📋 First unchecked: {txt}")
 
-    if is_break(txt):
-        print(f"  → Marking BREAK complete, continuing...")
-        lines = mark_done(idx, lines)
-        items, lines = parse_checklist()
-        unchecked = [(idx, txt) for idx, txt, chk in items if not chk]
-        if not unchecked:
-            print("✅ All items completed after marking BREAK!")
-            return True
-        idx, txt = unchecked[0]
-        print(f"  → Next: {txt}")
+    if is_break(txt) and not is_template_break(txt):
+        print(f"  ⏸  Paused at BREAK: {txt}")
+        return True
 
     for idx, txt in unchecked:
+        if is_template_break(txt):
+            print("  ⏭  Ignoring optional template BREAK")
+            continue
         if is_break(txt):
             print(f"  ⏸  Stopping at BREAK: {txt}")
-            break
+            return True
         pnum = find_phase_num(txt)
         if pnum is None:
             print(f"  ⏭  Skipping (not a phase): {txt}")

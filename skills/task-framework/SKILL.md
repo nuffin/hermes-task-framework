@@ -338,7 +338,11 @@ tasks/<ts>.<name>-<hash6>/
 
 ### Execution Model (unified runner)
 
-When a task has a `run.py` at its root, use it as the single entry point. The auto-runner reads TASK.md checklist, marks BREAK items complete, and executes phases until the next BREAK or end of list. See [auto-runner pattern](references/auto-runner.md).
+When a task has a `run.py` at its root, use it as the single entry point. The
+auto-runner reads TASK.md, ignores the literal optional template `BREAK`, and
+executes dependency-ready phases until a concrete BREAK or the end of the
+list. It never completes a concrete BREAK automatically. See [auto-runner
+pattern](references/auto-runner.md).
 
 | 标注 | 行为 | 示例 |
 |------|------|------|
@@ -419,8 +423,8 @@ When a task has multiple phases, add a `run.py` at the task root. Copy from `tem
 
 The auto mode:
 1. Reads TASK.md checklist, finds first `[ ]` item
-2. If it's a BREAK, marks it done, continues to next item
-3. Executes phases until the next BREAK or end of list
+2. Ignores the literal optional template BREAK; stops at any concrete BREAK
+3. Executes phases until the next concrete BREAK or end of list
 4. Marks each completed phase as `[x]`
 
 Unimplemented phases (5-7 in the template) return True (skip, don't fail).
@@ -518,6 +522,11 @@ active — <brief description>
 - [ ] BREAK: <optional — delete if no pause needed here>
 - [ ] Phase 3 — <verification / review / cleanup>
 
+<!-- The optional BREAK above is a template placeholder, not a planned
+     breakpoint. During concrete planning, delete it or replace it with a
+     specific pause request; it must not stop the first concrete,
+     dependency-ready checklist item. -->
+
 ## Tracking
 
 <!-- 可选。每个 phase 完成后加载 `task-tracker` skill 回写状态。
@@ -581,12 +590,24 @@ The agent reads TASK.md from top to bottom:
   [ ]      → 执行此项
 ```
 
-**Pre-checks section** (如果存在) → 只执行 Pre-checks 下的 `[ ]` 项，输出结果，等用户确认后再进入 Checklist。
+**Pre-checks section** (如果存在) → execute only its dependency-ready `[ ]`
+items. Continue into the Checklist without routine confirmation unless a
+concrete `BREAK` follows, an action is destructive or irreversible, a material
+decision lacks a safe default, or execution has genuinely failed or blocked.
 
 **BREAK 行** → 执行到此时暂停，输出内容给用户。用户确认后将 `[ ] BREAK:` 改成 `[x] DONE:`，下次自动跳过。
 
 
 **🔴 执行纪律：非 BREAK 不停** — 完成一个 `[ ]` 项后，立即找到下一个未完成的 `[ ]` 项。如果中间没有 `[ ] BREAK:`，直接执行，绝不询问"要不要继续"。Frequent confirmation prompts disrupt workflow.
+
+### Approved execution continuity
+
+After the user approves an active task or says “continue”, “继续”, or “不要停”,
+that authorization covers ordinary dependency-ready work: inspection,
+reversible edits, tests, task logging, and scoped commits (never push). Do not
+ask again between normal layers or after a background worker returns. Continue
+until an explicit `BREAK`, a hard tool/environment block, a destructive action,
+or a material decision with no safe default.
 
 ---
 
@@ -609,7 +630,9 @@ For the full generated index (README.md + TASKS.md), see [Root Index Files](#roo
 
 ### task_create <name> [description] [--skill <skill-name>] [--ticket <ticket-id>]
 
-Create a new task with timestamped directory. **After creation, show the user the README + checklist. Do NOT fill in placeholder content based on prior conversation.**
+Create a new task with timestamped directory. **After creation, report a concise
+created-task summary (directory/name, status, and next checklist item). Do NOT
+fill in placeholder content based on prior conversation.**
 
 Before creation, load `task-lifecycle-discipline` and use `task_api.py search` to confirm an equivalent task does not already exist. Do not hand-generate directories, hashes, or metadata. The former `task-initialization-sequence` and `task-create-first` rules are absorbed here and are no longer standalone workflows.
 
@@ -624,6 +647,27 @@ python3 scripts/manage_task.py create <name> --from-inbox <inbox-file-or-dir>
 ```
 
 The script handles: directory creation (`<ts>.<name>-<hash6>/`), subdirs (`input/ output/docs output/logs scripts/`), `.hermes-task.json`, TASK.md (from `templates/TASK.md`), MEMORY.md, CHANGELOG.md, README.md, and index regeneration. Inbox source is moved via cp + verify + rm (never raw `mv`).
+
+### Creation-to-execution continuity
+
+Task creation is not a routine approval boundary. After the concise
+created-task summary, locate and execute the first dependency-ready,
+non-`BREAK` checklist item when the task has a concrete, actionable execution
+point. Continue through later dependency-ready non-`BREAK` items under the
+normal execution rules.
+
+Stop and wait only when the same creation request explicitly says not to execute
+after creation, or when no concrete dependency-ready item exists. In the latter
+case, ask for the missing execution point. Do not invent a concrete plan from
+earlier conversation merely because a task was created: creation-only requests
+without a user-provided plan or actionable scope retain template placeholders.
+A default template literal such as `BREAK: <optional — delete if no pause needed
+here>` is not a concrete `BREAK` and must be ignored for pause purposes.
+
+During normal execution, pause only for a concrete `TASK.md` `BREAK`, a
+destructive or irreversible action, a material decision without a safe default,
+or a genuine blocking failure. Neither Git/push, deployment, nor clone
+authorization changes under this rule.
 
 **Post-create steps (agent-driven, not scripted):**
 
@@ -1008,12 +1052,15 @@ python3 scripts/manage_task.py  # from the skill directory rebuild <hash6>
 
 When the user says "do X" and X is complex:
 
-1. **Ask**: "这个任务看起来包含多个操作，我拆解成以下步骤，你看看对不对？"
+1. **Decompose** the work into concrete operations; ask only if a material
+   decision lacks a safe default or the required scope is missing.
 2. **List the operations** with brief description
 3. **Sequence them** with dependencies
 4. **For each operation**, note which strategy fits
 5. **Write TASK.md** with operations as checklist items
-6. **Present to user** for confirmation before executing
+6. **Execute the first dependency-ready non-BREAK item** when the task has a
+   concrete actionable execution point, unless the user explicitly requested
+   not to execute after creation; otherwise wait for the missing execution point.
 
 ---
 
