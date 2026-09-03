@@ -284,7 +284,24 @@ def gen_tasks_md(tasks):
 
         # Nested subtasks are shown under their root parent, never as root rows.
         child_root = os.path.join(TASKS_ROOT, dirname, "subtasks")
-        child_dirs = sorted(glob.glob(os.path.join(child_root, "2*")))
+        # Legacy children may not have a timestamp prefix.  Only enumerate
+        # real, marked direct children; never follow symlinks outside parent.
+        child_dirs = []
+        if os.path.isdir(child_root) and not os.path.islink(child_root):
+            expected = os.path.realpath(child_root)
+            for entry in os.scandir(child_root):
+                if entry.is_symlink() or not entry.is_dir(follow_symlinks=False):
+                    continue
+                real = os.path.realpath(entry.path)
+                try:
+                    contained = os.path.commonpath([expected, real]) == expected
+                except ValueError:
+                    contained = False
+                if (contained and real != expected and os.path.dirname(real) == expected
+                        and (os.path.isfile(os.path.join(entry.path, "TASK.md"))
+                             or os.path.isfile(os.path.join(entry.path, ".hermes-task.json")))):
+                    child_dirs.append(entry.path)
+        child_dirs.sort()
         if child_dirs:
             lines.append("")
             lines.append("### Subtasks")

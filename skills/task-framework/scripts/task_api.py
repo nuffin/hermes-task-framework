@@ -61,9 +61,9 @@ def resolve(identifier: str) -> Path:
         if value:
             return Path(value).resolve()
     candidate = Path(identifier).expanduser()
-    if candidate.is_dir():
+    if candidate.is_dir() and manage_task._is_contained_task_dir(str(candidate)):
         return candidate.resolve()
-    all_paths = [Path(value).resolve() for value in manage_task._find_all_task_dirs()]
+    all_paths = [Path(value).resolve() for value in manage_task._find_discovered_task_dirs()]
     exact = [path for path in all_paths if path.name == identifier]
     if not exact:
         for path in all_paths:

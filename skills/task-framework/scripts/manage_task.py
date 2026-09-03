@@ -100,13 +100,36 @@ def _task_hash_from_dir(task_dir):
     return m.group(1) if m else None
 
 
+def _is_contained_task_dir(task_dir, root=None):
+    """Return true only for a real, marked directory inside *root*."""
+    root = os.path.realpath(root or TASKS_ROOT)
+    path = os.path.abspath(task_dir)
+    if os.path.islink(path) or not os.path.isdir(path):
+        return False
+    real = os.path.realpath(path)
+    try:
+        if os.path.commonpath([root, real]) != root:
+            return False
+    except ValueError:
+        return False
+    return (os.path.isfile(os.path.join(path, ".hermes-task.json")) or
+            os.path.isfile(os.path.join(path, "TASK.md")))
+
+
+def _find_discovered_task_dirs():
+    """Return root tasks and direct physical children, including legacy names."""
+    roots = _find_all_task_dirs()
+    children = [child for parent in roots for child in _find_child_task_dirs(parent)]
+    return roots + children
+
+
 def _find_task_dir_by_hash(h):
-    if not os.path.isdir(TASKS_ROOT):
-        return None
-    candidates = glob.glob(os.path.join(TASKS_ROOT, "2*"))
-    candidates += glob.glob(os.path.join(TASKS_ROOT, "2*", "subtasks", "2*"))
-    for d in sorted(candidates, reverse=True):
-        if os.path.isdir(d) and _task_hash_from_dir(d) == h:
+    # Prefer a contained child over a stale top-level duplicate. Hashes are
+    # normally unique, but this preserves legacy child lookup during migration.
+    candidates = [d for d in _find_discovered_task_dirs()
+                  if _task_hash_from_dir(d) == h]
+    for d in sorted(candidates, key=lambda value: ("subtasks" not in value, value), reverse=False):
+        if _is_contained_task_dir(d) and _task_hash_from_dir(d) == h:
             return d
     return None
 
@@ -116,21 +139,30 @@ def _find_all_task_dirs():
         return []
     dirs = []
     for d in sorted(glob.glob(os.path.join(TASKS_ROOT, "2*")), reverse=True):
-        if os.path.isdir(d) and (
-            os.path.exists(os.path.join(d, ".hermes-task.json")) or
-            os.path.exists(os.path.join(d, "TASK.md"))
-        ):
+        if _is_contained_task_dir(d):
             dirs.append(d)
     return dirs
 
 
 def _find_child_task_dirs(parent_dir):
-    children = os.path.join(os.path.abspath(parent_dir), "subtasks")
-    if not os.path.isdir(children):
+    parent = os.path.abspath(parent_dir)
+    children = os.path.join(parent, "subtasks")
+    if os.path.islink(children) or not os.path.isdir(children):
         return []
-    return [d for d in sorted(glob.glob(os.path.join(children, "2*")), reverse=True)
-            if os.path.isdir(d) and (os.path.exists(os.path.join(d, ".hermes-task.json"))
-                                     or os.path.exists(os.path.join(d, "TASK.md")))]
+    expected = os.path.realpath(children)
+    result = []
+    for entry in os.scandir(children):
+        d = entry.path
+        if entry.is_symlink() or not entry.is_dir(follow_symlinks=False):
+            continue
+        real = os.path.realpath(d)
+        try:
+            contained = os.path.commonpath([expected, real]) == expected and real != expected
+        except ValueError:
+            contained = False
+        if contained and _is_contained_task_dir(d) and os.path.dirname(real) == expected:
+            result.append(d)
+    return sorted(result, reverse=True)
 
 
 def _resolve_parent(parent):
@@ -295,6 +327,51 @@ def _safe_move_dir(src_dir, dst_dir):
         print(f"WARNING: dst verified but could not remove src {src_dir}: {e}", file=sys.stderr)
 
 
+def _rename_finished_legacy_child(child, parent):
+    """Rename a finished legacy child using copy/verify/remove semantics."""
+    basename = os.path.basename(child)
+    if re.match(r'^\d{8}-\d{6}\.', basename):
+        return child
+    task_path = os.path.join(child, "TASK.md")
+    if not os.path.isfile(task_path):
+        return child
+    task_text = open(task_path, encoding="utf-8").read()
+    status_match = re.search(r'^## Status\s*\n\s*([^\s—]+)', task_text, re.MULTILINE)
+    if not status_match or status_match.group(1).lower() not in {"completed", "done", "cancelled"}:
+        return child
+    h = _task_hash_from_dir(child)
+    if not h:
+        try:
+            h = json.load(open(os.path.join(child, ".hermes-task.json"), encoding="utf-8")).get("hash")
+        except (OSError, json.JSONDecodeError):
+            h = None
+    if not h:
+        return child
+    destination = os.path.join(parent, "subtasks", _suggest_dir_name(h, child))
+    if os.path.abspath(destination) == os.path.abspath(child):
+        return child
+    _safe_move_dir(child, destination)
+    old_ref = os.path.relpath(child, parent)
+    new_ref = os.path.relpath(destination, parent)
+    # Replace references only in text artifacts owned by this parent; input
+    # payloads are deliberately excluded from migration edits.
+    for root, dirs, files in os.walk(parent, followlinks=False):
+        dirs[:] = [d for d in dirs if d != "input" and not os.path.islink(os.path.join(root, d))]
+        for filename in files:
+            path = os.path.join(root, filename)
+            try:
+                text = open(path, encoding="utf-8").read()
+            except (OSError, UnicodeDecodeError):
+                continue
+            placeholder = "__HERMES_LEGACY_CHILD_REF__"
+            replacement = text.replace(old_ref, placeholder).replace(
+                os.path.basename(child), os.path.basename(destination)).replace(placeholder, new_ref)
+            if replacement != text:
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(replacement)
+    return destination
+
+
 # ── template / path helpers ──
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -325,12 +402,18 @@ def _resolve_task_dir(hash_or_dir):
         if d:
             return d
     abs_path = os.path.abspath(hash_or_dir)
-    if os.path.isdir(abs_path):
+    if _is_contained_task_dir(abs_path):
         return abs_path
-    for pattern in [f"*.{hash_or_dir}*", f"*{hash_or_dir}*"]:
-        matches = sorted(glob.glob(os.path.join(TASKS_ROOT, pattern)))
-        if matches:
-            return matches[0]
+    all_dirs = _find_discovered_task_dirs()
+    exact = [d for d in all_dirs if os.path.basename(d) == hash_or_dir]
+    if not exact:
+        exact = [d for d in all_dirs
+                 if os.path.basename(d).endswith(f"-{hash_or_dir}")]
+    if not exact:
+        exact = [d for d in all_dirs
+                 if os.path.basename(d).lower().find(hash_or_dir.lower()) >= 0]
+    if exact:
+        return sorted(exact)[0]
     return None
 
 
@@ -508,6 +591,7 @@ def _migrate_subtasks():
                 meta.update(expected)
                 with open(meta_path, "w", encoding="utf-8") as fh:
                     json.dump(meta, fh, indent=2, ensure_ascii=False)
+            _rename_finished_legacy_child(child, parent)
 
 
 def cmd_reindex():
