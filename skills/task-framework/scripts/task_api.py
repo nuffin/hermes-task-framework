@@ -97,6 +97,15 @@ def describe_path(task_dir: Path) -> dict:
         "goal": section(task_text, "Goal").splitlines()[0] if section(task_text, "Goal") else "",
         "memory_layout": metadata.get("memory_layout", "flat"),
         "memory_root": metadata.get("memory_root"),
+        "parent": {
+            "hash": metadata.get("parent_hash"),
+            "path": metadata.get("parent_path"),
+        } if metadata.get("parent_hash") else None,
+        "children": [
+            {"hash": json.loads(read_text(Path(child) / ".hermes-task.json") or "{}").get("hash") or manage_task._task_hash_from_dir(child),
+             "path": str(Path(child).resolve()), "name": Path(child).name}
+            for child in manage_task._find_child_task_dirs(task_dir)
+        ],
         "checklist": parse_checklist(task_text),
         "metadata": metadata,
     }

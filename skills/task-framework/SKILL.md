@@ -867,6 +867,9 @@ The script handles:
 
 ## Root Index Files
 
+For the complete nested-subtask contract and compatibility behavior, see
+[`docs/SUBTASKS.md`](docs/SUBTASKS.md).
+
 Two auto-generated root index files live in `tasks/`:
 
 | File | Purpose | Content |

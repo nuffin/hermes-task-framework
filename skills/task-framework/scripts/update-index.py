@@ -282,6 +282,22 @@ def gen_tasks_md(tasks):
                 td = rti['description']
                 lines.append(f"- #{tid} — {td}")
 
+        # Nested subtasks are shown under their root parent, never as root rows.
+        child_root = os.path.join(TASKS_ROOT, dirname, "subtasks")
+        child_dirs = sorted(glob.glob(os.path.join(child_root, "2*")))
+        if child_dirs:
+            lines.append("")
+            lines.append("### Subtasks")
+            for child in child_dirs:
+                child_name = os.path.basename(child)
+                child_status = "—"
+                child_md = os.path.join(child, "TASK.md")
+                if os.path.exists(child_md):
+                    cm = re.search(r'^## (?:Status|状态)\s*\n\s*(.+?)\s*$', open(child_md, encoding='utf-8').read(), re.MULTILINE)
+                    if cm:
+                        child_status = cm.group(1).strip()
+                lines.append(f"- [{child_name}]({dirname}/subtasks/{child_name}/) — {child_status}")
+
         if checklist:
             done = sum(1 for c in checklist if c.startswith('- [x]'))
             total = len(checklist)

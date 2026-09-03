@@ -12,7 +12,7 @@ task-framework 任务生命周期管理工具
   4. Fallback: ~/studio/hermes/tasks (legacy ~/.hermes/tasks is never populated)
 
 Commands:
-    create    创建新任务（目录 + hash + 元数据 + 模板 + 可选 inbox 移入）
+    create    创建新任务（目录 + hash + 元数据 + 模板 + 可选 inbox 移入；--parent 可创建受控子任务）
     accept    从 inbox 条目创建任务（文件/目录自动处理）
     decline   拒绝 inbox 条目，移到 declined/
     status    更新任务状态
@@ -103,7 +103,9 @@ def _task_hash_from_dir(task_dir):
 def _find_task_dir_by_hash(h):
     if not os.path.isdir(TASKS_ROOT):
         return None
-    for d in sorted(glob.glob(os.path.join(TASKS_ROOT, "2*")), reverse=True):
+    candidates = glob.glob(os.path.join(TASKS_ROOT, "2*"))
+    candidates += glob.glob(os.path.join(TASKS_ROOT, "2*", "subtasks", "2*"))
+    for d in sorted(candidates, reverse=True):
         if os.path.isdir(d) and _task_hash_from_dir(d) == h:
             return d
     return None
@@ -120,6 +122,42 @@ def _find_all_task_dirs():
         ):
             dirs.append(d)
     return dirs
+
+
+def _find_child_task_dirs(parent_dir):
+    children = os.path.join(os.path.abspath(parent_dir), "subtasks")
+    if not os.path.isdir(children):
+        return []
+    return [d for d in sorted(glob.glob(os.path.join(children, "2*")), reverse=True)
+            if os.path.isdir(d) and (os.path.exists(os.path.join(d, ".hermes-task.json"))
+                                     or os.path.exists(os.path.join(d, "TASK.md")))]
+
+
+def _resolve_parent(parent):
+    task_dir = _resolve_task_dir(parent)
+    if not task_dir:
+        raise ValueError(f"parent task not found: {parent}")
+    root = os.path.realpath(TASKS_ROOT)
+    real = os.path.realpath(task_dir)
+    try:
+        inside_root = os.path.commonpath([root, real]) == root
+    except ValueError:
+        inside_root = False
+    if not inside_root:
+        raise ValueError("parent task must be inside the configured task root")
+    relative_parts = os.path.relpath(real, root).split(os.sep)
+    if "subtasks" in relative_parts:
+        raise ValueError("nested subtasks may not create children of a child")
+    if not os.path.isfile(os.path.join(task_dir, "TASK.md")):
+        raise ValueError(f"invalid parent task: {parent}")
+    return os.path.abspath(task_dir)
+
+
+def _assert_child_containment(task_dir, parent_dir):
+    expected = os.path.realpath(os.path.join(parent_dir, "subtasks"))
+    actual = os.path.realpath(task_dir)
+    if os.path.commonpath([expected, actual]) != expected or actual == expected:
+        raise ValueError("subtask is outside its parent subtasks directory")
 
 
 def _suggest_dir_name(h, task_dir=None):
@@ -455,14 +493,37 @@ def cmd_rebuild(hash_or_archive):
     return cmd_import(archive)
 
 
+def _migrate_subtasks():
+    """Backfill parent metadata for legacy physical subtasks without moving files."""
+    for parent in _find_all_task_dirs():
+        for child in _find_child_task_dirs(parent):
+            meta_path = os.path.join(child, ".hermes-task.json")
+            try:
+                meta = json.loads(open(meta_path, encoding="utf-8").read()) if os.path.exists(meta_path) else {}
+            except (OSError, json.JSONDecodeError):
+                meta = {}
+            expected = {"parent_hash": meta.get("parent_hash") or _task_hash_from_dir(parent),
+                        "parent_path": os.path.relpath(parent, TASKS_ROOT), "is_subtask": True, "depth": 1}
+            if any(meta.get(k) != v for k, v in expected.items()):
+                meta.update(expected)
+                with open(meta_path, "w", encoding="utf-8") as fh:
+                    json.dump(meta, fh, indent=2, ensure_ascii=False)
+
+
 def cmd_reindex():
     """Rebuild all index files: README.md + TASKS.md (via update-index.py)."""
+    _migrate_subtasks()
     _run_update_index()
     return True
 
 
-def cmd_list():
-    """List all tasks by scanning directories directly (not a cached index)."""
+def cmd_list(parent=None):
+    """List root tasks, or direct children when a parent is supplied."""
+    if parent:
+        parent_dir = _resolve_parent(parent)
+        for child in _find_child_task_dirs(parent_dir):
+            print(os.path.basename(child))
+        return True
     task_dirs = _find_all_task_dirs()
     if not task_dirs:
         print("No tasks found.")
@@ -536,7 +597,7 @@ def _exact_name_matches(slug):
     return matches
 
 
-def cmd_create(name, from_inbox=None, description=None, allow_duplicate=False):
+def cmd_create(name, from_inbox=None, description=None, allow_duplicate=False, parent=None):
     """Create a new task: directory + hash + meta + templates + (optional inbox file/dir move)."""
     slug = re.sub(r'[^a-z0-9-]', '', name.lower().replace(' ', '-')).strip('-')
     if not slug:
@@ -551,7 +612,12 @@ def cmd_create(name, from_inbox=None, description=None, allow_duplicate=False):
     h = hash6()
     ts = datetime.now().strftime('%Y%m%d-%H%M%S')
     dir_name = f"{ts}.{slug}-{h}"
-    task_dir = os.path.join(TASKS_ROOT, dir_name)
+    parent_dir = _resolve_parent(parent) if parent else None
+    task_dir = (os.path.join(parent_dir, "subtasks", dir_name) if parent_dir
+                else os.path.join(TASKS_ROOT, dir_name))
+    if parent_dir:
+        os.makedirs(os.path.join(parent_dir, "subtasks"), exist_ok=True)
+        _assert_child_containment(task_dir, parent_dir)
     os.makedirs(task_dir, exist_ok=True)
 
     # Subdirs
@@ -573,6 +639,12 @@ def cmd_create(name, from_inbox=None, description=None, allow_duplicate=False):
         "required_by": [],
         "priority": 2,
     }
+    if parent_dir:
+        parent_meta_path = os.path.join(parent_dir, ".hermes-task.json")
+        parent_meta = json.loads(open(parent_meta_path, encoding="utf-8").read()) if os.path.exists(parent_meta_path) else {}
+        meta.update({"parent_hash": parent_meta.get("hash") or _task_hash_from_dir(parent_dir),
+                     "parent_path": os.path.relpath(parent_dir, TASKS_ROOT),
+                     "is_subtask": True, "depth": 1})
     meta_path = os.path.join(task_dir, ".hermes-task.json")
     with open(meta_path, 'w') as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
@@ -726,6 +798,11 @@ def cmd_view(hash_or_dir):
         print("---")
     if os.path.exists(task_md):
         print(open(task_md, encoding='utf-8').read())
+    children = _find_child_task_dirs(task_dir)
+    if children:
+        print("---\nSubtasks:")
+        for child in children:
+            print(f"  {os.path.relpath(child, TASKS_ROOT)}")
     return True
 
 
@@ -789,6 +866,8 @@ new commands:
                         help='(create) task goal / description text')
     parser.add_argument('--allow-duplicate', action='store_true', default=False,
                         help='(create) bypass exact-name duplicate prevention')
+    parser.add_argument('--parent', dest='parent', default=None,
+                        help='(create) create as a contained subtask of an existing task')
     parser.add_argument('--name', dest='task_name', default=None,
                         help='(accept) override auto-derived task name')
     parser.add_argument('--reason', dest='reason', default='',
@@ -803,10 +882,10 @@ new commands:
         'import':     lambda: cmd_import(args.args[0]) if args.args else False,
         'rebuild':    lambda: cmd_rebuild(args.args[0]) if args.args else False,
         'reindex':    cmd_reindex,
-        'list':       cmd_list,
+        'list':       lambda: cmd_list(args.args[0] if args.args else None),
 
         'ensure-all': cmd_ensure_all,
-        'create':     lambda: cmd_create(args.args[0], from_inbox=args.from_inbox, description=args.description, allow_duplicate=args.allow_duplicate) if args.args else False,
+        'create':     lambda: cmd_create(args.args[0], from_inbox=args.from_inbox, description=args.description, allow_duplicate=args.allow_duplicate, parent=args.parent) if args.args else False,
         'accept':     lambda: cmd_accept(args.args[0], name=args.task_name) if args.args else False,
         'decline':    lambda: cmd_decline(args.args[0], reason=args.reason) if args.args else False,
         'status':     lambda: cmd_status(args.args[0], args.args[1], reason=args.reason) if len(args.args) >= 2 else False,
