@@ -508,7 +508,7 @@ container/index hooks and invariants below.
 
 A TODO may instead be `cancelled` or `blocked` only with an explicit outcome. An `open` TODO is not complete and must not be silently ignored.
 
-Use `scripts/todo_lifecycle.py <task-dir> add|route|terminal` for deterministic table updates. Validate with `validate_todos()` before completion.
+Use `scripts/todo_lifecycle.py <task-dir> add|route|terminal` for deterministic table updates. For orchestrated L1 work, reconcile exactly once per returned result with `task_api.py reconcile <task> '<json payload>'`; stable `result_id` makes retries idempotent and outcomes are `CONTINUE`, `CONTINUE_WAITING`, `COMPLETE`, or `HARD_BLOCK`. Validate with `validate_todos()` before completion.
 
 ```markdown
 # Task: <Name>

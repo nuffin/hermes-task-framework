@@ -8,6 +8,7 @@ considered complete.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from datetime import datetime
@@ -165,6 +166,84 @@ def set_terminal(task_dir: str | Path, todo_id: str, status: str, outcome: str) 
             path.write_text(_replace_rows(text, todos), encoding="utf-8")
             return item
     raise KeyError(f"TODO not found: {todo_id}")
+
+
+def _has_unfinished_checklist(text: str) -> bool:
+    """Return true when a non-BREAK checklist item is still pending."""
+    return any(
+        re.match(r"^\s*- \[ \]", line) and not line.strip().startswith("- [ ] BREAK:")
+        for line in text.splitlines()
+    )
+
+
+def reconcile_return(task_dir: str | Path, result: dict, classifier=None) -> dict:
+    """Reconcile one returned L1 result and select dependency-ready work.
+
+    The stable ``result_id`` makes processing idempotent. This planner does not
+    dispatch workers; callers execute returned routes and invoke it once per
+    result. A blocked result is terminal, while unresolved TODOs remain open.
+    """
+    if not isinstance(result, dict) or not result.get("result_id"):
+        raise ValueError("result_id is required for idempotent reconciliation")
+    result_id = str(result["result_id"])
+    state_path = Path(task_dir) / ".todo-continuation.json"
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"invalid continuation state: {exc}") from exc
+    processed = set(state.get("processed_results", []))
+    if result_id in processed:
+        return {"outcome": "IDEMPOTENT", "result_id": result_id, "routes": []}
+    status = str(result.get("status", "completed")).lower()
+    if status not in {"completed", "blocked"}:
+        raise ValueError("L1 result status must be completed or blocked")
+    discovered = result.get("discovered_todos", []) or []
+    if not isinstance(discovered, list):
+        raise ValueError("discovered_todos must be a list")
+    text = (Path(task_dir) / "TASK.md").read_text(encoding="utf-8")
+    existing = parse_todos(text)
+    by_key = {(item["requirement"], item["source"]): item for item in existing}
+    for row in discovered:
+        if not isinstance(row, dict) or not row.get("requirement"):
+            raise ValueError("each discovered TODO needs requirement")
+        source = str(row.get("source", f"L1 {result_id}"))
+        key = (str(row["requirement"]), source)
+        if key not in by_key:
+            by_key[key] = add_todo(task_dir, key[0], key[1])
+    if status == "blocked":
+        processed.add(result_id)
+        _write_continuation_state(state_path, processed)
+        return {"outcome": "HARD_BLOCK", "result_id": result_id,
+                "reason": result.get("reason", "L1 reported a hard block"), "routes": []}
+    checklist = "\\n".join(line for line in text.splitlines() if line.startswith("- [x]"))
+    routes = []
+    for row in discovered:
+        source = str(row.get("source", f"L1 {result_id}"))
+        item = by_key[(str(row["requirement"]), source)]
+        if item["status"] != "open":
+            continue
+        dependencies = [str(value) for value in row.get("depends_on", [])]
+        if dependencies and not all(re.search(re.escape(dep), checklist, re.IGNORECASE) for dep in dependencies):
+            continue
+        scope = classifier(item) if classifier else row.get("scope")
+        if scope in {"continuous", "nested", "top-level"}:
+            outcome = str(row.get("outcome") or {"continuous": "next checklist phase", "nested": "child task required", "top-level": "independent task required"}[scope])
+            update_todo(task_dir, item["id"], scope, outcome)
+            routes.append({"todo_id": item["id"], "scope": scope, "outcome": outcome})
+    current_text = (Path(task_dir) / "TASK.md").read_text(encoding="utf-8")
+    remaining = [item for item in parse_todos(current_text) if item["status"] == "open"]
+    checklist_pending = _has_unfinished_checklist(current_text)
+    processed.add(result_id)
+    _write_continuation_state(state_path, processed)
+    if (remaining or checklist_pending) and not routes:
+        return {"outcome": "CONTINUE_WAITING", "result_id": result_id, "routes": [], "todo_ids": [item["id"] for item in remaining], "checklist_pending": checklist_pending}
+    return {"outcome": "CONTINUE" if (remaining or checklist_pending or routes) else "COMPLETE", "result_id": result_id, "routes": routes, "checklist_pending": checklist_pending}
+
+
+def _write_continuation_state(path: Path, processed: set[str]) -> None:
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps({"processed_results": sorted(processed)}, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(path)
 
 
 def main() -> int:

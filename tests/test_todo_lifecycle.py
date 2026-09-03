@@ -78,6 +78,47 @@ class TodoLifecycleTests(unittest.TestCase):
         text = text.replace("|---|---|---|---|---|---|---|", "|---|---|---|---|---|---|---|\n| todo-1 | incomplete | source | timestamp | open |")
         self.assertTrue(todo.validate_todos(text))
 
+    def test_reconcile_repeated_return_is_idempotent_and_routes_new_todo(self):
+        result = {"result_id": "l1-1", "status": "completed", "discovered_todos": [
+            {"requirement": "New checklist work", "source": "L1 post-flight", "scope": "continuous", "outcome": "Phase 2b"}
+        ]}
+        first = todo.reconcile_return(self.task, result)
+        self.assertEqual(first["outcome"], "CONTINUE")
+        self.assertEqual(len(first["routes"]), 1)
+        second = todo.reconcile_return(self.task, result)
+        self.assertEqual(second["outcome"], "IDEMPOTENT")
+        self.assertEqual(len(todo.parse_todos((self.task / "TASK.md").read_text())), 1)
+
+    def test_reconcile_does_not_complete_with_pending_checklist(self):
+        waiting = todo.reconcile_return(self.task, {"result_id": "l1-checklist-pending", "status": "completed"})
+        self.assertEqual(waiting["outcome"], "CONTINUE_WAITING")
+        self.assertTrue(waiting["checklist_pending"])
+
+
+        result = {"result_id": "l1-2", "discovered_todos": [
+            {"requirement": "Waiting work", "source": "review", "scope": "nested", "depends_on": ["Phase 9"]}
+        ]}
+        waiting = todo.reconcile_return(self.task, result)
+        self.assertEqual(waiting["outcome"], "CONTINUE_WAITING")
+        self.assertEqual(todo.parse_todos((self.task / "TASK.md").read_text())[0]["status"], "open")
+
+    def test_reconcile_terminal_states_are_explicit(self):
+        blocked = todo.reconcile_return(self.task, {"result_id": "l1-block", "status": "blocked", "reason": "decision needed"})
+        self.assertEqual(blocked["outcome"], "HARD_BLOCK")
+        (self.task / "TASK.md").write_text((self.task / "TASK.md").read_text().replace("- [ ] Phase 1", "- [x] Phase 1"))
+        complete = todo.reconcile_return(self.task, {"result_id": "l1-done", "status": "completed"})
+        self.assertEqual(complete["outcome"], "COMPLETE")
+
+    def test_reconcile_classifier_can_route_nested_and_top_level(self):
+        todo.add_todo(self.task, "Related child", "worker")
+        todo.add_todo(self.task, "Unrelated task", "worker")
+        result = {"result_id": "l1-classify", "discovered_todos": [
+            {"requirement": "Related child", "source": "worker"},
+            {"requirement": "Unrelated task", "source": "worker"},
+        ]}
+        routed = todo.reconcile_return(self.task, result, lambda item: "nested" if item["requirement"] == "Related child" else "top-level")
+        self.assertEqual([r["scope"] for r in routed["routes"]], ["nested", "top-level"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -118,6 +118,11 @@ def command_describe(identifier: str) -> dict:
     return describe_path(resolve(identifier))
 
 
+def command_reconcile(identifier: str, result_json: str) -> dict:
+    """Reconcile one returned L1 result; safe to retry with same result_id."""
+    return todo_lifecycle.reconcile_return(resolve(identifier), json.loads(result_json))
+
+
 def command_search(query: str) -> list[dict]:
     terms = [item.lower() for item in query.split() if item.strip()]
     results = []
@@ -175,6 +180,10 @@ def main() -> int:
     get_parser.add_argument("identifier")
     get_parser.add_argument("key", nargs="?")
 
+    reconcile_parser = commands.add_parser("reconcile")
+    reconcile_parser.add_argument("identifier")
+    reconcile_parser.add_argument("result_json", help="JSON L1 return payload with stable result_id")
+
     get_extension_parser = commands.add_parser("get-extension")
     get_extension_parser.add_argument("identifier")
     get_extension_parser.add_argument("namespace")
@@ -192,6 +201,8 @@ def main() -> int:
             result = command_search(args.query)
         elif args.command == "get-meta":
             result = command_get_meta(args.identifier, args.key)
+        elif args.command == "reconcile":
+            result = command_reconcile(args.identifier, args.result_json)
         elif args.command == "get-extension":
             result = command_get_extension(args.identifier, args.namespace, args.key)
         else:
