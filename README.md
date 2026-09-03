@@ -27,6 +27,8 @@ trackable task directories — cross-session, cross-profile, cross-machine.
 | `task-cross-machine-sync` | Configurable Git synchronization of a task root |
 | `task-lifecycle-edge-cases` | Recovery: TASK.md resurrection from artifacts |
 | `task-lifecycle-portability` | Export/import/migration between machines via tar.gz or zip |
+| `task-todo-intake` | Intake discovered requirements and route them by lifecycle scope |
+| `task-nested-subtask-lifecycle` | Optional contained child-task lifecycle |
 | `task-external-repos-pattern` | Cloning external git repos into task directories for analysis |
 
 ## Discovery with skill-graph
@@ -52,11 +54,19 @@ pip install hermes-task-framework
 
 Create a task:
 
-```bash
-source ~/.hermes/personal/env.sh
-python3 skills/task-framework/scripts/manage_task.py create my-analysis \
-  --desc "Analyze the requested material"
+```text
+Windows:  py skills/task-framework/scripts/manage_task.py create my-analysis
+POSIX:    python3 skills/task-framework/scripts/manage_task.py create my-analysis
 ```
+
+No Bash, `source`, `find`, `grep`, `sed`, or `awk` is required for lifecycle,
+index, JSON, or archive operations. `templates/run.py` selects `.venv/Scripts/python.exe`
+on Windows and `.venv/bin/python` on POSIX. Configure roots with
+`HERMES_TASKS_ROOT` or `tasks.data_dir`; path containment is case-aware and
+archive imports reject traversal entries. Linux/WSL tests are executable
+runtime evidence. Windows and macOS have static and controlled `ntpath`
+regression evidence only; no native runners were available.
+
 
 List all tasks:
 

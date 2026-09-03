@@ -71,6 +71,13 @@ active — <brief description of current work>
 - `phase_02_<skill>/` — <产出物说明>
 - `phase_03_<skill>/` — <产出物说明>
 
+## TODO
+
+Undecomposed requirements discovered during execution. Every row must be routed, decomposed into the Checklist, explicitly cancelled, or blocked; never silently completed.
+
+| ID | Requirement | Source | Timestamp | Status | Scope decision | Routed task / checklist |
+|---|---|---|---|---|---|---|
+
 ## Checklist
 
 <!-- The optional BREAK below is a template placeholder, not a real pause.

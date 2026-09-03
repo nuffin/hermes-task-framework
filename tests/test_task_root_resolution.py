@@ -1,4 +1,5 @@
 import importlib.util
+import ntpath
 import os
 from pathlib import Path
 import subprocess
@@ -143,6 +144,27 @@ class TaskRootResolutionTests(unittest.TestCase):
 
             self.assertTrue(module.cmd_rebuild("d4e5f6"))
             self.assertTrue((Path(temp_dir) / task_name / "TASK.md").exists())
+    def test_windows_drive_and_case_insensitive_containment_seam(self):
+        module = load_manage_task()
+        self.assertTrue(module._paths_within(r"C:\\Tasks", r"c:\\tasks\\20260903.job-a1b2c3", ntpath))
+        self.assertFalse(module._paths_within(r"C:\\Tasks", r"C:\\Tasks-evasion\\child", ntpath))
+        self.assertFalse(module._paths_within(r"C:\\Tasks", r"D:\\Tasks\\child", ntpath))
+
+    def test_python_entrypoint_uses_windows_venv_layout(self):
+        template = (SCRIPT.parent.parent / "templates" / "run.py").read_text(encoding="utf-8")
+        self.assertIn('"Scripts" if os.name == "nt" else "bin"', template)
+        self.assertIn('"python.exe" if os.name == "nt" else "python"', template)
+
+    def test_import_rejects_zip_path_traversal(self):
+        module = load_manage_task()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            setattr(module, "TASKS_ROOT", temp_dir)
+            archive_path = Path(temp_dir) / "unsafe.zip"
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr("../../outside.txt", "must not extract")
+            with self.assertRaises(ValueError):
+                module.cmd_import(str(archive_path))
+            self.assertFalse((Path(temp_dir).parent / "outside.txt").exists())
 
 
 if __name__ == "__main__":

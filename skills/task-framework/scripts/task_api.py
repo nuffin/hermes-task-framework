@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import manage_task
+import todo_lifecycle
 
 
 def read_text(path: Path) -> str:
@@ -107,6 +108,8 @@ def describe_path(task_dir: Path) -> dict:
             for child in manage_task._find_child_task_dirs(task_dir)
         ],
         "checklist": parse_checklist(task_text),
+        "todos": todo_lifecycle.parse_todos(task_text),
+        "todo_validation_errors": todo_lifecycle.validate_todos(task_text),
         "metadata": metadata,
     }
 

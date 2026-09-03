@@ -23,3 +23,10 @@ into output or removed by reset; reset only clears the selected task's output.
 
 A child is valid only while its real path is below the exact parent's
 `subtasks/` directory. Do not hand-edit metadata or move child directories.
+
+## TODO routing
+
+The lifecycle owner is `task-requirement-intake`; the optional nested-child
+procedure is `task-nested-subtask-lifecycle`.
+
+Requirements discovered while executing a parent belong in its `TASK.md` `## TODO` table first. At intake, post-flight, or a phase transition, classify each row as `continuous` (append/refine the parent's Checklist), `nested` (create a child with `--parent`), or `top-level` (create an independent task). Record the resulting checklist phase or task path in the outcome column and mark the row `decomposed` or `routed`. Only explicit `cancelled` or `blocked` outcomes may close a TODO; an open row is unresolved.

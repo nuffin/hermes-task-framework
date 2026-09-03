@@ -137,14 +137,20 @@ When you receive a task request:
 
 ## Environment Variables
 
-This skill uses environment variables for portability across machines. After installation, these are set in `~/.hermes/env.sh`:
+This skill uses environment variables for portability across machines. Set
+`HERMES_TASKS_ROOT` in the process environment or profile configuration. On
+POSIX shells, an optional `~/.hermes/env.sh` may be sourced; Windows users
+should set the variable in PowerShell or the environment and invoke the Python
+entrypoints directly.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `HERMES_TASKS_ROOT` | `$HERMES_TASKS_ROOT` | Task container root (`tasks/2*/`, `tasks/inbox/`) |
 | `HERMES_PROJECTS_ROOT` | `$HERMES_PROJECTS_ROOT` | Project repos root |
 
-**Usage rule:** All inline shell commands in this SKILL.md use `$HERMES_TASKS_ROOT` instead of bare `tasks/` paths. When running commands from a Hermes session, source the env file first:
+**Usage rule:** All inline shell examples in this SKILL.md use
+`$HERMES_TASKS_ROOT` instead of bare `tasks/` paths. Sourcing an env file is
+optional and POSIX-only; the Python entrypoints work directly on Windows.
 
 ```bash
 source ~/.hermes/env.sh
@@ -486,6 +492,23 @@ Phase 3 (timeline-chart-preview):
 **Always read the actual template at `templates/TASK.md` when creating a task.**
 
 Every TASK.md uses:
+
+### TODO intake and scope routing
+
+The primary owner is the suite skill `task-requirement-intake`; load it for
+intake and classification. For a `nested` decision, load the optional
+`task-nested-subtask-lifecycle` skill. This core skill keeps only the
+container/index hooks and invariants below.
+
+`## TODO` records undecomposed requirements discovered during execution. Each row must include an ID, requirement, source, timestamp, status, scope decision, and outcome/reference. At intake, post-flight, and phase transitions classify each TODO:
+
+- `continuous`: strongly overlaps existing work; append/refine one or more Checklist phases and mark `decomposed`.
+- `nested`: related but independently deliverable; create a first-class child with `manage_task.py create <name> --parent <parent>` and mark `routed`.
+- `top-level`: unrelated to the parent; create an independent task and mark `routed`.
+
+A TODO may instead be `cancelled` or `blocked` only with an explicit outcome. An `open` TODO is not complete and must not be silently ignored.
+
+Use `scripts/todo_lifecycle.py <task-dir> add|route|terminal` for deterministic table updates. Validate with `validate_todos()` before completion.
 
 ```markdown
 # Task: <Name>

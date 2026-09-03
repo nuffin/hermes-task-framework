@@ -84,6 +84,21 @@ def _resolve_tasks_root() -> str:
 TASKS_ROOT = _resolve_tasks_root()
 
 
+def _paths_within(root, path, path_module=os.path):
+    """Case-aware containment, injectable with ntpath for Windows tests."""
+    root = path_module.normcase(path_module.normpath(path_module.abspath(os.fspath(root))))
+    path = path_module.normcase(path_module.normpath(path_module.abspath(os.fspath(path))))
+    try:
+        return path_module.commonpath([root, path]) == root
+    except ValueError:  # different Windows drives (or incompatible path syntax)
+        return False
+
+
+def _is_within(root, path):
+    """Case-aware real-path containment on the current filesystem."""
+    return _paths_within(os.path.realpath(root), os.path.realpath(path))
+
+
 def _hash6():
     """Generate a cryptographically-secure 6-char hex hash."""
     return secrets.token_hex(3)
@@ -107,10 +122,7 @@ def _is_contained_task_dir(task_dir, root=None):
     if os.path.islink(path) or not os.path.isdir(path):
         return False
     real = os.path.realpath(path)
-    try:
-        if os.path.commonpath([root, real]) != root:
-            return False
-    except ValueError:
+    if not _is_within(root, real):
         return False
     return (os.path.isfile(os.path.join(path, ".hermes-task.json")) or
             os.path.isfile(os.path.join(path, "TASK.md")))
@@ -156,11 +168,8 @@ def _find_child_task_dirs(parent_dir):
         if entry.is_symlink() or not entry.is_dir(follow_symlinks=False):
             continue
         real = os.path.realpath(d)
-        try:
-            contained = os.path.commonpath([expected, real]) == expected and real != expected
-        except ValueError:
-            contained = False
-        if contained and _is_contained_task_dir(d) and os.path.dirname(real) == expected:
+        contained = _is_within(expected, real) and os.path.normcase(real) != os.path.normcase(expected)
+        if contained and _is_contained_task_dir(d) and os.path.normcase(os.path.dirname(real)) == os.path.normcase(expected):
             result.append(d)
     return sorted(result, reverse=True)
 
@@ -171,10 +180,7 @@ def _resolve_parent(parent):
         raise ValueError(f"parent task not found: {parent}")
     root = os.path.realpath(TASKS_ROOT)
     real = os.path.realpath(task_dir)
-    try:
-        inside_root = os.path.commonpath([root, real]) == root
-    except ValueError:
-        inside_root = False
+    inside_root = _is_within(root, real)
     if not inside_root:
         raise ValueError("parent task must be inside the configured task root")
     relative_parts = os.path.relpath(real, root).split(os.sep)
@@ -188,7 +194,7 @@ def _resolve_parent(parent):
 def _assert_child_containment(task_dir, parent_dir):
     expected = os.path.realpath(os.path.join(parent_dir, "subtasks"))
     actual = os.path.realpath(task_dir)
-    if os.path.commonpath([expected, actual]) != expected or actual == expected:
+    if not _is_within(expected, actual) or os.path.normcase(actual) == os.path.normcase(expected):
         raise ValueError("subtask is outside its parent subtasks directory")
 
 
@@ -477,6 +483,10 @@ def _copytree_deref(src, dst, ignore=None):
             continue
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
+        if os.path.islink(s):
+            # Do not dereference links: Windows may lack link privileges and
+            # a link can otherwise export files outside the task directory.
+            continue
         if os.path.isdir(s):
             _copytree_deref(s, d, ignore)
         else:
@@ -491,9 +501,21 @@ def cmd_import(archive_path):
     with tempfile.TemporaryDirectory(prefix="task-import-") as tmp:
         if tarfile.is_tarfile(archive_path):
             with tarfile.open(archive_path, 'r:gz') as tar:
+                # Python 3.12's filter is not available everywhere; validate
+                # members explicitly for safe Linux/macOS/Windows imports.
+                destination = Path(tmp).resolve()
+                for member in tar.getmembers():
+                    target = (destination / member.name).resolve()
+                    if not _is_within(destination, target):
+                        raise ValueError(f"archive member escapes destination: {member.name}")
                 tar.extractall(path=tmp)
         elif zipfile.is_zipfile(archive_path):
             with zipfile.ZipFile(archive_path) as archive:
+                destination = Path(tmp).resolve()
+                for member in archive.infolist():
+                    target = (destination / member.filename).resolve()
+                    if not _is_within(destination, target):
+                        raise ValueError(f"archive member escapes destination: {member.filename}")
                 archive.extractall(path=tmp)
         else:
             print(f"Unsupported archive format: {archive_path}")

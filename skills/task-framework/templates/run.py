@@ -14,12 +14,15 @@ Auto mode (no args):
 """
 
 import sys, os, subprocess, re
+from pathlib import Path
 
-TASK_DIR = os.path.dirname(os.path.abspath(__file__))
-TASK_MD = os.path.join(TASK_DIR, "TASK.md")
-SCRIPTS = os.path.join(TASK_DIR, "scripts")
-VENV_PY = os.path.join(TASK_DIR, ".venv", "bin", "python")
-PY = VENV_PY if os.path.exists(VENV_PY) else sys.executable
+TASK_DIR = Path(__file__).resolve().parent
+TASK_MD = TASK_DIR / "TASK.md"
+SCRIPTS = TASK_DIR / "scripts"
+# venv layout differs by platform; prefer the active interpreter, then the
+# platform-specific local venv executable. No shell or `source` is required.
+VENV_PY = TASK_DIR / ".venv" / ("Scripts" if os.name == "nt" else "bin") / ("python.exe" if os.name == "nt" else "python")
+PY = str(VENV_PY) if VENV_PY.exists() else sys.executable
 
 
 # ── Phase runners ──

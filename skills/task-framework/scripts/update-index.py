@@ -260,6 +260,24 @@ def gen_tasks_md(tasks):
         lines.append("")
         lines.append(f"**目录:** `{dirname}/`")
 
+        # TODO intake is shown separately from the executable checklist.
+        task_path = os.path.join(TASKS_ROOT, dirname, "TASK.md")
+        try:
+            from todo_lifecycle import parse_todos, validate_todos
+            todo_text = open(task_path, encoding="utf-8").read()
+            todo_items = parse_todos(todo_text)
+            todo_errors = validate_todos(todo_text)
+        except (OSError, ImportError):
+            todo_items, todo_errors = [], []
+        if todo_items or todo_errors:
+            unresolved = sum(item["status"] == "open" for item in todo_items) + len(todo_errors)
+            lines.append("")
+            lines.append(f"### TODO ({unresolved}/{len(todo_items) + len(todo_errors)} unresolved)")
+            for item in todo_items:
+                lines.append(f"- `{item['id']}` [{item['status']}; {item['scope']}] {item['requirement']} → {item['route'] or 'needs routing'}")
+            for error in todo_errors:
+                lines.append(f"- ⚠ invalid TODO: {error}")
+
         # Related tasks display
         if related_tasks:
             lines.append("")

@@ -65,32 +65,33 @@ def _hash6():
     return secrets.token_hex(3)
 
 def resolve_ref(ref_str):
-    """Resolve ref:hash/output_name to absolute path."""
+    """Resolve ref:hash/output_name to a contained absolute path."""
     if not ref_str.startswith('ref:'):
         return ref_str
     parts = ref_str[4:].split('/', 1)
     hash_id = parts[0]
     output_name = parts[1] if len(parts) > 1 else None
-    
-    matches = glob.glob(os.path.join(TASKS_ROOT, f'*{hash_id}*'))
-    if not matches:
+    candidates = sorted(Path(TASKS_ROOT).glob(f'*{hash_id}*'))
+    task_dir = next((p for p in candidates if p.is_dir() and not p.is_symlink()), None)
+    if task_dir is None:
         raise FileNotFoundError(f'Task with hash {hash_id} not found in {TASKS_ROOT}')
-    
-    task_dir = matches[0]
-    meta_path = os.path.join(task_dir, '.hermes-task.json')
-    if not os.path.exists(meta_path):
+    meta_path = task_dir / '.hermes-task.json'
+    if not meta_path.is_file():
         raise FileNotFoundError(f'.hermes-task.json not found in {task_dir}')
-    
-    with open(meta_path) as f:
+    with meta_path.open(encoding='utf-8') as f:
         meta = json.load(f)
-    
     if output_name:
         if output_name not in meta.get('outputs', {}):
             raise KeyError(f'Output "{output_name}" not declared in {task_dir}/.hermes-task.json. '
                            f'Available: {list(meta.get("outputs", {}).keys())}')
-        return os.path.join(task_dir, meta['outputs'][output_name])
-    
-    return task_dir
+        output = (task_dir / str(meta['outputs'][output_name])).resolve()
+        root = task_dir.resolve()
+        try:
+            output.relative_to(root)
+        except ValueError:
+            raise ValueError(f'Output "{output_name}" escapes task directory')
+        return str(output)
+    return str(task_dir)
 
 def check_cycles(meta):
     """Walk dependency graph, raise ValueError on cycles."""
