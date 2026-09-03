@@ -131,6 +131,7 @@ class NestedSubtaskTests(unittest.TestCase):
         try:
             (outside / "TASK.md").write_text("# Task: outside")
             link = self.parent / "subtasks" / "legacy-link-aaaaaa"
+            link.parent.mkdir(parents=True, exist_ok=True)
             try:
                 link.symlink_to(outside, target_is_directory=True)
             except OSError as exc:
