@@ -52,6 +52,28 @@ Track task metadata, context, inputs, outputs, and verification artifacts unless
 6. Commit task changes with task hash/name in the message.
 7. Push only after explicit authorization.
 
+## Repository-aware branch promotion
+
+Promotion is decided from the target repository, not from this task-framework
+repository's branch names. Before promoting, call
+`scripts/branch_policy.py`'s `discover_policy(root)` and validate the proposed
+source/target pair with `validate_promotion()`. The discovery order is:
+
+1. `.branch-promotion.json`, `branch-promotion.json`, or
+   `.hermes/branch-policy.json` (JSON key `promotion_path`,
+   `branch_promotion`, or `branch_promotion_path`; value is a list or an
+   arrow-separated string);
+2. the first arrow path in `BRANCHING.md`, `CONTRIBUTING.md`,
+   `DEVELOPMENT.md`, `docs/BRANCHING.md`, or `docs/CONTRIBUTING.md`;
+3. the generic fallback `feat -> develop -> main`.
+
+Concrete feature names such as `feat/login` are classified as `feat`. Only the
+next hop is valid, so a feature cannot skip a repository's integration branch.
+Repositories that intentionally omit a feature branch may declare
+`["develop", "main"]`. Promotion must use fast-forward-only merge and a normal
+push; this policy never authorizes force-push, merge commits, or an implicit
+remote.
+
 ## Fallbacks
 
 Use `task-lifecycle-portability` export/import for one-task transfer, offline movement, or when the task root is not a shared Git repository.
