@@ -65,6 +65,89 @@ class TaskApiTests(unittest.TestCase):
         metadata = json.loads((self.task_dir / ".hermes-task.json").read_text())
         self.assertEqual(metadata["extensions"]["ticket"]["related_tickets"], result)
 
+    def test_remote_dispatch_receipt_is_namespaced_and_idempotent(self):
+        receipt = {
+            "task_hash": self.task_hash,
+            "controller_node": "controller",
+            "executor_node": "executor",
+            "dispatch_id": "dispatch-001",
+            "tmux_session": "hermes-runtime",
+            "tmux_window": f"task-{self.task_hash}",
+            "task_dir": str(self.task_dir),
+            "executor_profile": f"{self.task_hash}--remote-task-orchestrator--worker",
+            "status": "dispatched",
+        }
+        first = json.loads(self.run_api("set-remote-dispatch", self.task_hash, json.dumps(receipt)).stdout)
+        second = json.loads(self.run_api("set-remote-dispatch", self.task_hash, json.dumps(receipt)).stdout)
+        self.assertFalse(first["idempotent"])
+        self.assertTrue(second["idempotent"])
+
+        stored = json.loads(self.run_api("get-extension", self.task_hash, "remote_execution", "receipt").stdout)
+        self.assertEqual(stored, receipt)
+        metadata = json.loads((self.task_dir / ".hermes-task.json").read_text())
+        self.assertEqual(metadata["extensions"]["remote_execution"]["receipt"], receipt)
+
+    def test_remote_dispatch_rejects_mismatched_task_and_conflicting_receipt(self):
+        receipt = {
+            "task_hash": "ffffff",
+            "controller_node": "controller",
+            "executor_node": "executor",
+            "dispatch_id": "dispatch-001",
+            "tmux_session": "hermes-runtime",
+            "tmux_window": f"task-{self.task_hash}",
+            "task_dir": str(self.task_dir),
+            "executor_profile": f"{self.task_hash}--remote-task-orchestrator--worker",
+            "status": "dispatched",
+        }
+        rejected = self.run_api("set-remote-dispatch", self.task_hash, json.dumps(receipt), check=False)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn("task_hash", json.loads(rejected.stderr)["error"])
+
+        receipt["task_hash"] = self.task_hash
+        self.run_api("set-remote-dispatch", self.task_hash, json.dumps(receipt))
+        receipt["dispatch_id"] = "dispatch-002"
+        conflict = self.run_api("set-remote-dispatch", self.task_hash, json.dumps(receipt), check=False)
+        self.assertNotEqual(conflict.returncode, 0)
+        self.assertIn("already exists", json.loads(conflict.stderr)["error"])
+
+    def test_remote_result_requires_matching_receipt_and_safe_outputs(self):
+        receipt = {
+            "task_hash": self.task_hash,
+            "controller_node": "controller",
+            "executor_node": "executor",
+            "dispatch_id": "dispatch-001",
+            "tmux_session": "hermes-runtime",
+            "tmux_window": f"task-{self.task_hash}",
+            "task_dir": str(self.task_dir),
+            "executor_profile": f"{self.task_hash}--remote-task-orchestrator--worker",
+            "status": "dispatched",
+        }
+        self.run_api("set-remote-dispatch", self.task_hash, json.dumps(receipt))
+        manifest = {
+            "task_hash": self.task_hash,
+            "dispatch_id": "dispatch-001",
+            "executor_node": "executor",
+            "source_commit": "0123456789abcdef",
+            "status": "pending_review",
+            "outputs": [{"name": "summary", "path": "output/docs/SUMMARY.md", "bytes": 12, "sha256": "a" * 64}],
+        }
+        first = json.loads(self.run_api("record-remote-result", self.task_hash, json.dumps(manifest)).stdout)
+        replay = json.loads(self.run_api("record-remote-result", self.task_hash, json.dumps(manifest)).stdout)
+        self.assertFalse(first["idempotent"])
+        self.assertTrue(replay["idempotent"])
+        stored = json.loads(self.run_api("get-extension", self.task_hash, "remote_execution", "result").stdout)
+        self.assertEqual(stored, manifest)
+
+        conflict_manifest = {**manifest, "source_commit": "fedcba9876543210"}
+        conflict = self.run_api("record-remote-result", self.task_hash, json.dumps(conflict_manifest), check=False)
+        self.assertNotEqual(conflict.returncode, 0)
+        self.assertIn("already exists", json.loads(conflict.stderr)["error"])
+
+        manifest["outputs"][0]["path"] = "../escape.md"
+        rejected = self.run_api("record-remote-result", self.task_hash, json.dumps(manifest), check=False)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn("safe task-relative", json.loads(rejected.stderr)["error"])
+
     def test_missing_task_returns_structured_error(self):
         result = self.run_api("describe", "ffffff", check=False)
         self.assertEqual(result.returncode, 1)

@@ -49,7 +49,7 @@ tags:
 - operations
 - logging
 - pdf
-version: 1.4.0
+version: 1.4.1
 ---
 
 ---
@@ -991,7 +991,15 @@ python3 scripts/task_api.py search "<terms>"
 python3 scripts/task_api.py get-meta <task> [key]
 python3 scripts/task_api.py get-extension <task> <namespace> [key]
 python3 scripts/task_api.py set-extension <task> <namespace> <key> '<json-value>'
+python3 scripts/task_api.py set-remote-dispatch <task> '<receipt-json>'
+python3 scripts/task_api.py record-remote-result <task> '<manifest-json>'
 ```
+
+`set-remote-dispatch` records one validated `extensions.remote_execution.receipt`.
+The same receipt is idempotent; a different receipt for the same task is rejected.
+`record-remote-result` requires the matching receipt and validates source commit,
+status, task-relative output paths, output-name uniqueness, byte counts, and
+SHA-256 values before writing `extensions.remote_execution.result`.
 
 Core metadata is read-only through this adapter surface. Writes are namespaced under `.hermes-task.json.extensions.<namespace>` to prevent PS/Kanban/ticket integrations from overwriting lifecycle fields.
 
