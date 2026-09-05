@@ -214,5 +214,11 @@ def main() -> int:
         return 1
 
 
+# JSON API mutations use the same root lease as command-line task management.
+from task_write_lock import guarded as _writer_guarded
+for _name, _function in list(globals().items()):
+    if _name.startswith('command_') and callable(_function):
+        globals()[_name] = _writer_guarded(lambda: manage_task.TASKS_ROOT)(_function)
+
 if __name__ == "__main__":
     raise SystemExit(main())

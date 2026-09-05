@@ -398,7 +398,9 @@ def _run_update_index():
     import subprocess
     script = os.path.join(_SCRIPT_DIR, 'update-index.py')
     if os.path.exists(script):
-        subprocess.run([sys.executable, script], check=True, capture_output=True, text=True)
+        from task_write_lock import child_lease
+        subprocess.run([sys.executable, script], check=True, capture_output=True, text=True,
+                       **child_lease(TASKS_ROOT))
 
 
 def _resolve_task_dir(hash_or_dir):
@@ -1002,6 +1004,12 @@ new commands:
     ok = fn() if fn else False
     sys.exit(0 if ok else 1)
 
+
+# Canonical command functions participate even when called by task_api/importers.
+from task_write_lock import guarded as _writer_guarded
+for _command_name, _command in list(globals().items()):
+    if _command_name.startswith('cmd_') and callable(_command):
+        globals()[_command_name] = _writer_guarded(lambda: TASKS_ROOT)(_command)
 
 if __name__ == '__main__':
     main()

@@ -98,7 +98,39 @@ def main() -> int:
         command.add_argument("--branch")
         if name != "status":
             command.add_argument("--execute", action="store_true")
+    checkpoint = commands.add_parser('sync')
+    checkpoint.add_argument('--config', required=True)
+    checkpoint.add_argument('--execute', action='store_true')
     args = parser.parse_args()
+    if args.command == 'sync':
+        try:
+            from task_checkpoint_sync import sync
+            configuration_path = Path(args.config)
+            if not configuration_path.is_absolute():
+                raise ValueError('--config must be an absolute path')
+            configuration = json.loads(configuration_path.read_text())
+            if not isinstance(configuration, dict):
+                raise ValueError('sync configuration must be a JSON object')
+            required = {'tasks_root', 'remote', 'remote_url', 'branch', 'node_id', 'auto_push', 'cooperative_writers'}
+            allowed = required | {'max_blob_bytes', 'command_timeout_seconds', 'network_retries'}
+            if not required <= configuration.keys() or configuration.keys() - allowed:
+                raise ValueError('missing or unknown sync configuration fields')
+            if not Path(configuration['tasks_root']).is_absolute():
+                raise ValueError('tasks_root must be absolute')
+            for key in ('auto_push', 'cooperative_writers'):
+                if configuration[key] is not True:
+                    raise ValueError(key + ' must be true')
+            result = sync(Path(configuration['tasks_root']), configuration['remote'],
+                          configuration['remote_url'], configuration['branch'], configuration['node_id'],
+                          args.execute, configuration['auto_push'], configuration['cooperative_writers'],
+                          configuration.get('max_blob_bytes', 10485760),
+                          configuration.get('command_timeout_seconds', 30),
+                          configuration.get('network_retries', 2))
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0
+        except (ValueError, OSError, TypeError, subprocess.SubprocessError) as exc:
+            print(json.dumps({'error': str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
     root = resolve_root(args.tasks_root)
     try:
         if args.command == "status":
