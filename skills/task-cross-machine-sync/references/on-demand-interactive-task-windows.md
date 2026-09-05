@@ -9,25 +9,20 @@ or a hardware confirmation.
 Do not create an interactive window for ordinary automated work. Create or reuse
 one only after the task identifies a concrete interaction requirement.
 
-The cluster runtime owns SSH and tmux lifecycle. Task-framework supplies this
-reference as the task-operation convention; it does not create sessions itself.
+A remote runtime adapter owns SSH and tmux lifecycle. This task-framework
+reference defines task-operation requirements only; it does not create sessions
+itself and does not prescribe a role, suite, or external coordinator.
 
 ## Window identity
 
-On the selected executor, use exactly:
-
-```text
-hermes-runtime:task-<hash6>
-```
-
-`<hash6>` is the first six characters of the canonical task hash. Reuse the
-existing window for the same task. Never substitute a generic shell window or
-create a second window for a different task identity.
+The task overlay derives one deterministic window identity from the canonical
+task hash. Reuse the existing window for the same task. Never substitute a
+generic shell window or create a second window for a different task identity.
 
 ## Operator handoff
 
 1. Verify the selected executor, canonical task hash, and reason for interaction.
-2. Create/reuse `hermes-runtime:task-<hash6>`.
+2. Resolve or reuse the receipt-derived task window.
 3. Start an interactive shell or the minimal required command in that window.
 4. Tell the operator the exact SSH attach command and the exact prompt they should
    expect. Never request, capture, or transmit a secret.
@@ -36,11 +31,3 @@ create a second window for a different task identity.
    fails rather than opening an unattended pinentry.
 6. Preserve the window for task audit and later operator attachment until the task
    reaches a terminal state or the operator explicitly asks to close it.
-
-## GPG example
-
-For task `abcdef...` on `ms-a2`, use `hermes-runtime:task-abcdef`. Start a new
-interactive shell there. If the GPG key is not cached, pinentry-curses appears in
-that pane; the operator attaches, enters the passphrase locally, and returns to
-the shell prompt. The scheduled worker then verifies the existing agent cache
-without accepting a passphrase or falling back to unsigned commits.
