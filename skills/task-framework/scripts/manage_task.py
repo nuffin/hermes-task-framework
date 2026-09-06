@@ -44,6 +44,58 @@ def _read_config_yaml(config_path):
         return {}
 
 
+MODEL_IDENTIFIER_PATTERN = re.compile(r"^[^\s\x00]{1,256}$")
+
+
+def _model_from_config(config):
+    value = config.get("model") if isinstance(config, dict) else None
+    if isinstance(value, dict):
+        value = value.get("default")
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def _provider_from_config(config):
+    value = config.get("model") if isinstance(config, dict) else None
+    if isinstance(value, dict):
+        value = value.get("provider")
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def _resolve_value(candidates, field_name):
+    for value, source in candidates:
+        if value is None:
+            continue
+        value = str(value).strip()
+        if not value:
+            continue
+        if not MODEL_IDENTIFIER_PATTERN.fullmatch(value):
+            raise ValueError(f"{field_name} must be non-empty text without whitespace or NUL bytes")
+        return value, source
+    return None, None
+
+
+def _resolve_creation_model(explicit_model=None, explicit_provider=None):
+    """Capture the provider/model pair at creation; never infer it at dispatch."""
+    hermes_home = os.environ.get("HERMES_HOME", "").strip()
+    profile_config = _read_config_yaml(Path(hermes_home) / "config.yaml") if hermes_home else {}
+    global_config = _read_config_yaml(Path.home() / ".hermes" / "config.yaml")
+    model, model_source = _resolve_value([
+        (explicit_model, "explicit"),
+        (os.environ.get("HERMES_MODEL"), "launch_env"),
+        (os.environ.get("HERMES_INFERENCE_MODEL"), "launch_env"),
+        (_model_from_config(profile_config), "profile_config"),
+        (_model_from_config(global_config), "global_config"),
+    ], "model")
+    provider, provider_source = _resolve_value([
+        (explicit_provider, "explicit"),
+        (os.environ.get("HERMES_TUI_PROVIDER"), "launch_env"),
+        (os.environ.get("HERMES_INFERENCE_PROVIDER"), "launch_env"),
+        (_provider_from_config(profile_config), "profile_config"),
+        (_provider_from_config(global_config), "global_config"),
+    ], "provider")
+    return model, model_source, provider, provider_source
+
+
 def _resolve_tasks_root() -> str:
     """Resolve the task root with ROOT as canonical and DIR as legacy fallback."""
     # 1. Canonical env var, then the legacy pip-package compatibility alias.
@@ -705,7 +757,7 @@ def _exact_name_matches(slug):
     return matches
 
 
-def cmd_create(name, from_inbox=None, description=None, allow_duplicate=False, parent=None):
+def cmd_create(name, from_inbox=None, description=None, allow_duplicate=False, parent=None, model=None, provider=None):
     """Create a new task: directory + hash + meta + templates + (optional inbox file/dir move)."""
     slug = re.sub(r'[^a-z0-9-]', '', name.lower().replace(' ', '-')).strip('-')
     if not slug:
@@ -747,6 +799,16 @@ def cmd_create(name, from_inbox=None, description=None, allow_duplicate=False, p
         "required_by": [],
         "priority": 2,
     }
+    creation_model, model_source, creation_provider, provider_source = _resolve_creation_model(model, provider)
+    if creation_model or creation_provider:
+        meta["extensions"] = {
+            "remote_execution": {
+                "model": creation_model,
+                "model_source": model_source,
+                "provider": creation_provider,
+                "provider_source": provider_source,
+            }
+        }
     if parent_dir:
         parent_meta_path = os.path.join(parent_dir, ".hermes-task.json")
         parent_meta = json.loads(open(parent_meta_path, encoding="utf-8").read()) if os.path.exists(parent_meta_path) else {}
@@ -955,7 +1017,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\
 new commands:
-  create <name> [--from-inbox <file-or-dir>] [--desc <text>]   Create a new task
+  create <name> [--from-inbox <file-or-dir>] [--desc <text>] [--model <model>] [--provider <provider>]
   accept <inbox_item> [--name <task-name>]                     Accept inbox item into a new task
   decline <inbox_item> [--reason <text>]                       Move inbox item to declined/
   status <hash_or_dir> <status> [--reason <text>]             Update task status
@@ -976,6 +1038,10 @@ new commands:
                         help='(create) bypass exact-name duplicate prevention')
     parser.add_argument('--parent', dest='parent', default=None,
                         help='(create) create as a contained subtask of an existing task')
+    parser.add_argument('--model', dest='model', default=None,
+                        help='(create) persist the task creation model for remote dispatch')
+    parser.add_argument('--provider', dest='provider', default=None,
+                        help='(create) persist the task creation provider for remote dispatch')
     parser.add_argument('--name', dest='task_name', default=None,
                         help='(accept) override auto-derived task name')
     parser.add_argument('--reason', dest='reason', default='',
@@ -993,7 +1059,7 @@ new commands:
         'list':       lambda: cmd_list(args.args[0] if args.args else None),
 
         'ensure-all': cmd_ensure_all,
-        'create':     lambda: cmd_create(args.args[0], from_inbox=args.from_inbox, description=args.description, allow_duplicate=args.allow_duplicate, parent=args.parent) if args.args else False,
+        'create':     lambda: cmd_create(args.args[0], from_inbox=args.from_inbox, description=args.description, allow_duplicate=args.allow_duplicate, parent=args.parent, model=args.model, provider=args.provider) if args.args else False,
         'accept':     lambda: cmd_accept(args.args[0], name=args.task_name) if args.args else False,
         'decline':    lambda: cmd_decline(args.args[0], reason=args.reason) if args.args else False,
         'status':     lambda: cmd_status(args.args[0], args.args[1], reason=args.reason) if len(args.args) >= 2 else False,

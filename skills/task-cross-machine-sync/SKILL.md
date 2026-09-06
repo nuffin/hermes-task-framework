@@ -16,7 +16,7 @@ metadata:
       properties: {reason: validates context after transport, strength: strong}
 name: task-cross-machine-sync
 platforms: [linux, macos]
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Task Cross-Machine Sync
@@ -29,6 +29,57 @@ Synchronizes the configured `$HERMES_TASKS_ROOT` as a Git repository. It contain
 - Git remote and branch supplied by the environment/user;
 - optional machine role and conflict policy supplied outside this skill;
 - optional Git LFS policy for large artifacts.
+
+## Remote execution model contract
+
+Every task that may be explicitly dispatched to another machine has one
+immutable-at-dispatch provider/model pair. Store it in canonical task metadata:
+
+```json
+{
+  "extensions": {
+    "remote_execution": {
+      "provider": "openai-codex",
+      "model": "gpt-5.6-terra-900k",
+      "provider_source": "explicit",
+      "model_source": "explicit"
+    }
+  }
+}
+```
+
+### Creation-time capture
+
+The task creation API resolves both fields once, independently but with the same
+source order:
+
+1. explicit `manage_task.py create --model <model> --provider <provider>`;
+2. Hermes launch-scoped `HERMES_MODEL` / `HERMES_INFERENCE_MODEL` and
+   `HERMES_TUI_PROVIDER` / `HERMES_INFERENCE_PROVIDER`;
+3. current profile configuration, then global configuration, `model.default`
+   and `model.provider`.
+
+The creating conversation must pass both `--model` and `--provider` when it has
+a temporary per-conversation override that is not exported into the process
+environment. Do not defer this decision until remote dispatch: the controller
+may later use a different provider/model pair.
+
+### Dispatch-time resolution
+
+An explicit dispatch provider/model pair may override the stored creation pair
+only when the controller records both values in the dispatch request. Otherwise
+dispatch uses `extensions.remote_execution.provider` and `.model`. The receipt,
+`LaunchSpec`, and result manifest must all record the same resolved pair. A
+missing provider or model is a blocked dispatch; never silently fall back to the
+executor's local provider or model defaults.
+
+The task-specific runtime overlay starts Hermes with its receipt-derived pair:
+
+```text
+hermes -p <executor-profile> -m <resolved-model> --provider <resolved-provider>
+```
+
+Generic SSH/tmux runtime remains model-agnostic and never reads task metadata.
 
 ## Preconditions
 
