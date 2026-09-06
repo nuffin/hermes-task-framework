@@ -64,6 +64,25 @@ class TaskIntegrityTests(unittest.TestCase):
         self.assertEqual(process.returncode, 1)
         changed = json.loads(process.stdout)
         self.assertIn("README.md", changed["changed"])
+    def test_symlink_and_post_flight_cli_allow_relative_contained_input_alias(self):
+        (self.task_dir / "input" / "payload").mkdir()
+        (self.task_dir / "input" / "alias").symlink_to("payload")
+        symlinks = json.loads(self.run_integrity("symlinks", self.task_hash).stdout)
+        self.assertTrue(symlinks["ok"])
+        self.assertEqual(symlinks["symlinks"][0]["reason"], "relative contained target")
+        post_flight = json.loads(self.run_integrity("post-flight", self.task_hash).stdout)
+        self.assertTrue(post_flight["ok"])
+        self.assertEqual(post_flight["scope"], "task")
+        self.assertEqual(post_flight["phase"], "post-flight")
+
+    def test_symlink_cli_rejects_absolute_target(self):
+        outside = Path(self.temp.name) / "outside"
+        outside.write_text("outside\n", encoding="utf-8")
+        (self.task_dir / "input" / "external").symlink_to(outside)
+        process = self.run_integrity("symlinks", self.task_hash, check=False)
+        self.assertEqual(process.returncode, 1)
+        result = json.loads(process.stdout)
+        self.assertEqual(result["rejected"][0]["reason"], "absolute target")
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ from pathlib import Path
 TASK_SCRIPTS = Path(__file__).resolve().parents[2] / "task-framework" / "scripts"
 sys.path.insert(0, str(TASK_SCRIPTS))
 import task_api  # pyright: ignore[reportMissingImports]  # noqa: E402
+from task_symlink_policy import inspect_task  # pyright: ignore[reportMissingImports]  # noqa: E402
 
 CANONICAL = ("TASK.md", "README.md", "MEMORY.md", "CHANGELOG.md", ".hermes-task.json")
 RELATION_KEYS = ("dependencies", "related", "supersedes", "requires", "required_by")
@@ -93,6 +94,11 @@ def audit(identifier: str) -> dict:
     for dirname in ("input", "output", "scripts"):
         if not (root / dirname).is_dir():
             warnings.append(f"missing standard directory: {dirname}/")
+    symlinks = inspect_task(root)
+    errors.extend(
+        f"symlink policy: {entry['path']}: {entry['reason']}"
+        for entry in symlinks["rejected"]
+    )
     return {
         "task": description,
         "ok": not errors,
@@ -100,6 +106,7 @@ def audit(identifier: str) -> dict:
         "warnings": warnings,
         "subsystems": subsystems,
         "relations": relation_hashes(metadata),
+        "symlinks": symlinks,
         "manifest_entries": len(build_manifest(root)),
     }
 
@@ -123,6 +130,18 @@ def closure(identifier: str) -> dict:
     return {"root": root["hash"], "tasks": list(seen.values()), "unresolved": sorted(set(unresolved))}
 
 
+def post_flight(identifier: str) -> dict:
+    description = task_api.command_describe(identifier)
+    report = inspect_task(Path(description["path"]))
+    return {
+        "scope": "task",
+        "phase": "post-flight",
+        "task": {"hash": description["hash"], "path": description["path"]},
+        "ok": report["ok"],
+        "symlinks": report,
+    }
+
+
 def compare(source: Path, destination: Path) -> dict:
     source_manifest = build_manifest(source.resolve())
     destination_manifest = build_manifest(destination.resolve())
@@ -143,6 +162,10 @@ def main() -> int:
     audit_parser.add_argument("identifier")
     closure_parser = commands.add_parser("closure")
     closure_parser.add_argument("identifier")
+    symlinks_parser = commands.add_parser("symlinks")
+    symlinks_parser.add_argument("identifier")
+    post_flight_parser = commands.add_parser("post-flight")
+    post_flight_parser.add_argument("identifier")
     manifest_parser = commands.add_parser("manifest")
     manifest_parser.add_argument("identifier")
     manifest_parser.add_argument("--output", type=Path)
@@ -157,6 +180,13 @@ def main() -> int:
         elif args.command == "closure":
             result = closure(args.identifier)
             code = 0 if not result["unresolved"] else 1
+        elif args.command == "symlinks":
+            description = task_api.command_describe(args.identifier)
+            result = inspect_task(Path(description["path"]))
+            code = 0 if result["ok"] else 1
+        elif args.command == "post-flight":
+            result = post_flight(args.identifier)
+            code = 0 if result["ok"] else 1
         elif args.command == "manifest":
             root = Path(task_api.command_describe(args.identifier)["path"])
             result = build_manifest(root)

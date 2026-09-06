@@ -72,6 +72,12 @@ def gather_tasks(tasks_root):
     task_dirs = sorted(glob.glob(os.path.join(tasks_root, "2*/")))
     results = []
     for d in task_dirs:
+        if os.path.islink(d.rstrip('/')):
+            raise ValueError(f'symlinked task directory refused: {d}')
+        for input_name in ('TASK.md', '.hermes-task.json'):
+            candidate = os.path.join(d, input_name)
+            if os.path.islink(candidate):
+                raise ValueError(f'symlinked index input refused: {candidate}')
         dirname = os.path.basename(d.rstrip('/'))
         parts = dirname.split('.', 1)
         ts = parts[0]
@@ -327,6 +333,8 @@ def gen_tasks_md(tasks):
                 child_name = os.path.basename(child)
                 child_status = "—"
                 child_md = os.path.join(child, "TASK.md")
+                if os.path.islink(child_md):
+                    raise ValueError(f'symlinked child index input refused: {child_md}')
                 if os.path.exists(child_md):
                     cm = re.search(r'^## (?:Status|状态)\s*\n\s*(.+?)\s*$', open(child_md, encoding='utf-8').read(), re.MULTILINE)
                     if cm:
@@ -358,20 +366,41 @@ def get_inbox(tasks_root):
                  if os.path.isfile(os.path.join(inbox_dir, f)) or os.path.isdir(os.path.join(inbox_dir, f))]
     return sorted(items)
 
+def _write_index_atomically(tasks_root, name, content):
+    """Replace a regular root index without following symlinks or hardlinks."""
+    import tempfile
+    import stat
+    root = os.path.realpath(tasks_root)
+    path = os.path.join(root, name)
+    if os.path.lexists(path):
+        mode = os.lstat(path).st_mode
+        if not stat.S_ISREG(mode):
+            raise ValueError(f'index target must be a regular file: {path}')
+    descriptor, temporary = tempfile.mkstemp(prefix='.task-index-', dir=root)
+    try:
+        with os.fdopen(descriptor, 'w', encoding='utf-8') as output:
+            output.write(content)
+            output.flush()
+            os.fsync(output.fileno())
+        os.chmod(temporary, 0o644)
+        # rename replaces a raced symlink itself; never opens its target for writing.
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+    return path
+
+
 def write_readme(tasks_root):
     tasks = gather_tasks(tasks_root)
     content = gen_readme(tasks)
-    path = os.path.join(tasks_root, "README.md")
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(content)
+    path = _write_index_atomically(tasks_root, 'README.md', content)
     return path, len(content)
 
 def write_tasks_md(tasks_root):
     tasks = gather_tasks(tasks_root)
     content = gen_tasks_md(tasks)
-    path = os.path.join(tasks_root, "TASKS.md")
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(content)
+    path = _write_index_atomically(tasks_root, 'TASKS.md', content)
     return path, len(content)
 
 def main():
@@ -384,8 +413,10 @@ def main():
         print(f"Error: tasks root not found: {tasks_root}", file=sys.stderr)
         sys.exit(1)
 
-    p1, s1 = write_readme(tasks_root)
-    p2, s2 = write_tasks_md(tasks_root)
+    from task_write_lock import task_writer_lock
+    with task_writer_lock(tasks_root):
+        p1, s1 = write_readme(tasks_root)
+        p2, s2 = write_tasks_md(tasks_root)
     tasks = gather_tasks(tasks_root)
     print(f"Updated:")
     print(f"  {p1}  ({s1}B)")

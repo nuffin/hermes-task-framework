@@ -60,10 +60,23 @@ Report task hashes, roots, input/output inventories, manifest equality, context-
 
 See `references/task-root-relocation.md` for the checklist.
 
+## Symlink portability policy
+
+`symlinks` and task-scope `post-flight` apply one reusable policy:
+
+- allow only an existing relative target whose resolved path remains inside the same task root;
+- reject absolute, missing, or task-escaping targets;
+- reject a symlink at the task-root canonical files (`TASK.md`, `README.md`, `MEMORY.md`, `CHANGELOG.md`, `.hermes-task.json`);
+- reject a symlink at tasks-root generated indexes (`README.md`, `TASKS.md`).
+
+The commands are read-only and emit JSON. `post-flight` is the per-task integrity record used after task operations; it does not mutate a global task index.
+
 ## Permanent tooling
 
 ```bash
 python3 scripts/task_integrity.py audit <hash-or-dir>
+python3 scripts/task_integrity.py symlinks <hash-or-dir>
+python3 scripts/task_integrity.py post-flight <hash-or-dir>
 python3 scripts/task_integrity.py closure <hash-or-dir>
 python3 scripts/task_integrity.py manifest <hash-or-dir> --output <manifest.json>
 python3 scripts/task_integrity.py compare <source-dir> <destination-dir>
