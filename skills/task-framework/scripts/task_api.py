@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -179,6 +180,25 @@ def _require_string(value: object, field: str) -> str:
     return value
 
 
+def _canonical_remote_receipt_digest(receipt: dict) -> str:
+    identity = {
+        "controller_node": receipt["controller_node"],
+        "conversation_profile": receipt["conversation_profile"],
+        "dispatch_id": receipt["dispatch_id"],
+        "execution_mode": receipt["execution_mode"],
+        "executor_node": receipt["executor_node"],
+        "model": receipt["model"],
+        "provider": receipt["provider"],
+        "status": "dispatched",
+        "task_dir": receipt["task_dir"],
+        "task_hash": receipt["task_hash"],
+        "tmux_session": receipt["tmux_session"],
+        "tmux_window": receipt["tmux_window"],
+    }
+    canonical = json.dumps(identity, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 def _validate_remote_receipt(task_dir: Path, metadata: dict, receipt: object) -> dict:
     if not isinstance(receipt, dict):
         raise ValueError("remote dispatch receipt must be an object")
@@ -186,14 +206,34 @@ def _validate_remote_receipt(task_dir: Path, metadata: dict, receipt: object) ->
     expected_hash = metadata.get("hash") or manage_task._task_hash_from_dir(str(task_dir))
     if task_hash != expected_hash:
         raise ValueError("task_hash does not match the resolved task")
-    for field in ("controller_node", "executor_node", "dispatch_id", "tmux_session", "tmux_window", "task_dir", "executor_profile"):
+    for field in (
+        "controller_node",
+        "executor_node",
+        "dispatch_id",
+        "receipt_digest",
+        "tmux_session",
+        "tmux_window",
+        "task_dir",
+        "conversation_profile",
+        "execution_mode",
+        "model",
+        "provider",
+    ):
         _require_string(receipt.get(field), field)
+    if not re.fullmatch(r"[0-9a-f]{64}", receipt["receipt_digest"]):
+        raise ValueError("receipt_digest must be a lowercase SHA-256 digest")
     if not Path(receipt["task_dir"]).is_absolute():
         raise ValueError("task_dir must be an absolute path")
+    if Path(receipt["task_dir"]).resolve() != task_dir.resolve():
+        raise ValueError("task_dir must resolve to the canonical task directory")
     if receipt["tmux_window"] != f"task-{task_hash}":
         raise ValueError("tmux_window must equal task-<task_hash>")
     if receipt.get("status") != "dispatched":
         raise ValueError("remote dispatch receipt status must be dispatched")
+    if receipt["execution_mode"] not in {"remote-dispatch", "human-local", "explicit-role", "web-sandbox"}:
+        raise ValueError("execution_mode is unsupported")
+    if receipt["receipt_digest"] != _canonical_remote_receipt_digest(receipt):
+        raise ValueError("receipt_digest does not match the canonical receipt identity")
     return receipt
 
 
@@ -220,7 +260,7 @@ def _validate_remote_result(metadata: dict, manifest: object) -> dict:
     receipt = metadata.get("extensions", {}).get("remote_execution", {}).get("receipt")
     if not isinstance(receipt, dict):
         raise ValueError("remote dispatch receipt is required before recording a result")
-    for field in ("task_hash", "dispatch_id", "executor_node"):
+    for field in ("task_hash", "dispatch_id", "executor_node", "model", "provider"):
         if manifest.get(field) != receipt.get(field):
             raise ValueError(f"{field} does not match remote dispatch receipt")
     source_commit = _require_string(manifest.get("source_commit"), "source_commit")

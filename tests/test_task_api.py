@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import subprocess
@@ -41,6 +42,20 @@ class TaskApiTests(unittest.TestCase):
             text=True,
         )
 
+    @staticmethod
+    def receipt_digest(receipt: dict) -> str:
+        identity = {
+            key: receipt[key]
+            for key in (
+                "controller_node", "conversation_profile", "dispatch_id", "execution_mode",
+                "executor_node", "model", "provider", "task_dir", "task_hash",
+                "tmux_session", "tmux_window",
+            )
+        }
+        identity["status"] = "dispatched"
+        canonical = json.dumps(identity, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
     def test_describe_resolves_hash_and_returns_canonical_fields(self):
         result = json.loads(self.run_api("describe", self.task_hash).stdout)
         self.assertEqual(result["hash"], self.task_hash)
@@ -71,12 +86,17 @@ class TaskApiTests(unittest.TestCase):
             "controller_node": "controller",
             "executor_node": "executor",
             "dispatch_id": "dispatch-001",
+            "receipt_digest": "b" * 64,
             "tmux_session": "hermes-runtime",
             "tmux_window": f"task-{self.task_hash}",
             "task_dir": str(self.task_dir),
-            "executor_profile": f"{self.task_hash}--remote-task-orchestrator--worker",
+            "conversation_profile": "cluster-dispatch",
+            "execution_mode": "remote-dispatch",
+            "model": "gpt-5.6-terra-900k",
+            "provider": "openai-codex",
             "status": "dispatched",
         }
+        receipt["receipt_digest"] = self.receipt_digest(receipt)
         first = json.loads(self.run_api("set-remote-dispatch", self.task_hash, json.dumps(receipt)).stdout)
         second = json.loads(self.run_api("set-remote-dispatch", self.task_hash, json.dumps(receipt)).stdout)
         self.assertFalse(first["idempotent"])
@@ -93,19 +113,26 @@ class TaskApiTests(unittest.TestCase):
             "controller_node": "controller",
             "executor_node": "executor",
             "dispatch_id": "dispatch-001",
+            "receipt_digest": "b" * 64,
             "tmux_session": "hermes-runtime",
             "tmux_window": f"task-{self.task_hash}",
             "task_dir": str(self.task_dir),
-            "executor_profile": f"{self.task_hash}--remote-task-orchestrator--worker",
+            "conversation_profile": "cluster-dispatch",
+            "execution_mode": "remote-dispatch",
+            "model": "gpt-5.6-terra-900k",
+            "provider": "openai-codex",
             "status": "dispatched",
         }
+        receipt["receipt_digest"] = self.receipt_digest(receipt)
         rejected = self.run_api("set-remote-dispatch", self.task_hash, json.dumps(receipt), check=False)
         self.assertNotEqual(rejected.returncode, 0)
         self.assertIn("task_hash", json.loads(rejected.stderr)["error"])
 
         receipt["task_hash"] = self.task_hash
+        receipt["receipt_digest"] = self.receipt_digest(receipt)
         self.run_api("set-remote-dispatch", self.task_hash, json.dumps(receipt))
         receipt["dispatch_id"] = "dispatch-002"
+        receipt["receipt_digest"] = self.receipt_digest(receipt)
         conflict = self.run_api("set-remote-dispatch", self.task_hash, json.dumps(receipt), check=False)
         self.assertNotEqual(conflict.returncode, 0)
         self.assertIn("already exists", json.loads(conflict.stderr)["error"])
@@ -116,12 +143,17 @@ class TaskApiTests(unittest.TestCase):
             "controller_node": "controller",
             "executor_node": "executor",
             "dispatch_id": "dispatch-001",
+            "receipt_digest": "b" * 64,
             "tmux_session": "hermes-runtime",
             "tmux_window": f"task-{self.task_hash}",
             "task_dir": str(self.task_dir),
-            "executor_profile": f"{self.task_hash}--remote-task-orchestrator--worker",
+            "conversation_profile": "cluster-dispatch",
+            "execution_mode": "remote-dispatch",
+            "model": "gpt-5.6-terra-900k",
+            "provider": "openai-codex",
             "status": "dispatched",
         }
+        receipt["receipt_digest"] = self.receipt_digest(receipt)
         self.run_api("set-remote-dispatch", self.task_hash, json.dumps(receipt))
         manifest = {
             "task_hash": self.task_hash,
@@ -129,6 +161,8 @@ class TaskApiTests(unittest.TestCase):
             "executor_node": "executor",
             "source_commit": "0123456789abcdef",
             "status": "pending_review",
+            "model": "gpt-5.6-terra-900k",
+            "provider": "openai-codex",
             "outputs": [{"name": "summary", "path": "output/docs/SUMMARY.md", "bytes": 12, "sha256": "a" * 64}],
         }
         first = json.loads(self.run_api("record-remote-result", self.task_hash, json.dumps(manifest)).stdout)
