@@ -44,6 +44,8 @@ Transient runtime status never belongs in `MEMORY.md`. Record observed execution
 
 ## MEMORY.md format
 
+Flat contexts use a §-delimited body only:
+
 ```text
 <one declarative fact paragraph>
 
@@ -56,10 +58,25 @@ Transient runtime status never belongs in `MEMORY.md`. Record observed execution
 🔴 <critical invariant>
 ```
 
+Hierarchical contexts make the root `MEMORY.md` the discoverable entry point. Its body uses the same format, but it **must** begin with this canonical YAML frontmatter schema before the body:
+
+```yaml
+---
+context_memory:
+  children:
+    - id: api
+      memory: memories/api/MEMORY.md
+      changelog: memories/api/CHANGELOG.md
+---
+```
+
+`id` is the lowercase-kebab-case subsystem name. `memory` and `changelog` are the exact relative paths for that subsystem pair. The managed script is the authority for this intentionally restricted YAML subset; do not hand-reformat it.
+
 Rules:
 
-- One fact per paragraph, separated by `§` on its own line.
-- No headings, tables, tags, or frontmatter.
+- One stable fact per body paragraph, separated by `§` on its own line.
+- Flat `MEMORY.md` files have no frontmatter requirement. Root `MEMORY.md` files with a `memories/` directory require canonical frontmatter at byte zero.
+- No headings, tables, or tags in the §-delimited body.
 - Use declarative facts, not instructions.
 - Use `🔴` only for enforced invariants.
 - Remove or replace stale facts instead of retaining historical versions.
@@ -107,7 +124,7 @@ Use when multiple sessions modify distinct subsystems under one long-running tas
         └── CHANGELOG.md              # subsystem operations and verification
 ```
 
-Subsystem names are lowercase kebab-case. Every subsystem directory must contain both files.
+Subsystem names are lowercase kebab-case. Every subsystem directory must contain both files. The root frontmatter is the authoritative, explicit child index: it contains exactly one entry for every `memories/<subsystem>/` pair and makes any directory context discoverable without scanning arbitrary files.
 
 ### Root versus subsystem ownership
 
@@ -122,11 +139,11 @@ Root files are indexes and syntheses, not copies of subsystem files.
 
 Before changing a hierarchical entity:
 
-1. Read root `MEMORY.md` completely.
+1. Read root `MEMORY.md` completely, including its canonical `context_memory.children` frontmatter index.
 2. Read recent relevant root `CHANGELOG.md` entries.
-3. Identify the target subsystem.
-4. Read its `MEMORY.md` completely.
-5. Read recent relevant entries from its `CHANGELOG.md`.
+3. Identify the target subsystem from the root index; do not infer children from unrelated directories.
+4. Read its indexed `MEMORY.md` completely.
+5. Read recent relevant entries from its indexed `CHANGELOG.md`.
 
 ## Write protocol
 
@@ -134,7 +151,7 @@ After a verified change:
 
 1. Update subsystem `MEMORY.md` only if stable facts changed.
 2. Append subsystem `CHANGELOG.md` with operation, reason, artifacts, verification, blockers, and next step.
-3. Update root `MEMORY.md` only if the subsystem index or cross-subsystem facts changed.
+3. When a subsystem is added, run `init` so it adds the canonical root index entry without losing the existing root body; update root `MEMORY.md` only if its index or cross-subsystem facts changed.
 4. Append a concise root `CHANGELOG.md` summary naming affected subsystem logs.
 
 ## Tooling
@@ -151,7 +168,9 @@ Verify required files and naming:
 python3 scripts/manage_directory_context.py verify <entity-dir>
 ```
 
-The script never overwrites existing context files.
+The script never overwrites subsystem context files. When `init` adds a subsystem to an existing hierarchical root, it minimally upgrades or updates only the root frontmatter index and preserves its §-delimited body verbatim.
+
+`verify` accepts a flat pair with no `memories/` directory. For a hierarchical context it rejects missing frontmatter, noncanonical YAML, duplicate ids, invalid ids, wrong paths, index entries without an on-disk complete pair, and on-disk subsystem pairs omitted from the root index.
 
 ## Relationship to task-framework
 
