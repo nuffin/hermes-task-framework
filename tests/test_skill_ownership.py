@@ -22,6 +22,7 @@ class SkillOwnershipTests(unittest.TestCase):
             "task-lifecycle-portability",
             "task-external-repos-pattern",
             "task-cross-machine-sync",
+            "task-root-git-operations",
         }
         for name in names:
             self.assertTrue((SKILLS / name / "SKILL.md").is_file(), name)
