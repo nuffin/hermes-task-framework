@@ -705,7 +705,136 @@ def _exact_name_matches(slug):
     return matches
 
 
-def cmd_create(name, from_inbox=None, description=None, allow_duplicate=False, parent=None):
+_RELATED_STOP_WORDS = {
+    "a", "an", "and", "for", "from", "in", "of", "on", "or", "the", "to", "with",
+    "task", "tasks", "create", "update", "work", "feature", "fix", "new",
+}
+# These words describe implementation shape or broad engineering intent, not a
+# task domain.  They must never be enough to stop creation on their own.
+_RELATED_GENERIC_TERMS = {
+    "architecture", "architectures", "baseline", "baselines", "rewrite", "rewrites",
+    "rewritten", "rewriting", "rust", "performance", "performances", "migration",
+    "migrations", "implementation", "implement", "implemented", "refactor",
+    "refactors", "refactoring", "design", "system", "systems", "platform",
+    "platforms", "framework", "frameworks", "code", "coding", "test", "tests",
+    "testing", "integration", "integrations", "api", "apis", "service", "services",
+}
+
+
+def _task_related_summary(task_dir):
+    """Return one canonical task record used by search and create preflight."""
+    task_md = os.path.join(task_dir, "TASK.md")
+    task_text = open(task_md, encoding="utf-8").read() if os.path.isfile(task_md) else ""
+    meta_path = os.path.join(task_dir, ".hermes-task.json")
+    try:
+        meta = json.load(open(meta_path, encoding="utf-8")) if os.path.exists(meta_path) else {}
+    except (OSError, json.JSONDecodeError):
+        meta = {}
+    title_match = re.search(r"^# Task:\s*(.+)$", task_text, re.MULTILINE)
+    goal_match = re.search(r"^## Goal\s*\n+(.*?)(?=^## |\Z)", task_text, re.MULTILINE | re.DOTALL)
+    return {
+        "path": os.path.abspath(task_dir),
+        "directory": os.path.basename(task_dir),
+        "name": meta.get("name") or (title_match.group(1).strip() if title_match else ""),
+        "title": title_match.group(1).strip() if title_match else "",
+        "goal": goal_match.group(1).strip() if goal_match else "",
+        "task_text": task_text,
+    }
+
+
+def _related_terms(value):
+    """Return domain terms; generic implementation language is deliberately ignored."""
+    return sorted({term for term in re.findall(r"[a-z0-9]+", value.lower())
+                   if len(term) >= 3
+                   and term not in _RELATED_STOP_WORDS
+                   and term not in _RELATED_GENERIC_TERMS})
+
+
+def _related_phrases(value):
+    """Return adjacent two-or-more domain-term phrases from a query."""
+    tokens = re.findall(r"[a-z0-9]+", value.lower())
+    phrases = set()
+    run = []
+    for term in tokens:
+        if (len(term) < 3 or term in _RELATED_STOP_WORDS
+                or term in _RELATED_GENERIC_TERMS):
+            if len(run) >= 2:
+                phrases.add(" ".join(run))
+            run = []
+            continue
+        run.append(term)
+        if len(run) >= 2:
+            phrases.add(" ".join(run[-2:]))
+    if len(run) >= 2:
+        phrases.add(" ".join(run))
+    return sorted(phrases)
+
+
+def find_related_tasks(name, description=None, exclude_paths=()):
+    """Find deterministic, high-signal related-task candidates.
+
+    Only task identity (metadata name / title) and the explicit Goal are
+    indexed.  Free-form TASK.md sections are intentionally excluded because a
+    parent-task backlink or copied context is not evidence that two tasks share
+    a domain.  A candidate must have either a shared domain anchor in its
+    identity, two shared domain terms across identity/Goal, or a shared
+    two-term domain phrase.  Generic engineering language is excluded before
+    scoring, so words such as ``architecture``, ``baseline``, ``rewrite``,
+    ``rust``, and ``performance`` cannot trigger a candidate.
+    """
+    query = " ".join(part for part in (name or "", description or "") if part).strip()
+    terms = set(_related_terms(query))
+    phrases = _related_phrases(query)
+    if not query or not terms:
+        return []
+    excluded = {os.path.abspath(path) for path in exclude_paths}
+    candidates = []
+    for task_dir in _find_discovered_task_dirs():
+        item = _task_related_summary(task_dir)
+        if item["path"] in excluded:
+            continue
+        identity = " ".join(part for part in (item["name"], item["title"]) if part)
+        identity_terms = set(_related_terms(identity))
+        goal_terms = set(_related_terms(item["goal"]))
+        identity_overlap = terms & identity_terms
+        all_overlap = terms & (identity_terms | goal_terms)
+        normalized_identity = re.sub(r"\s+", " ", identity.lower()).strip()
+        normalized_goal = re.sub(r"\s+", " ", item["goal"].lower()).strip()
+        phrase_matches = [phrase for phrase in phrases
+                          if phrase in normalized_identity or phrase in normalized_goal]
+        # A domain anchor in the title/name is deliberately stronger than a
+        # body-text hit: it retains named domains such as Agora and Polis.
+        if not (identity_overlap or len(all_overlap) >= 2 or phrase_matches):
+            continue
+        fields = []
+        if identity_overlap:
+            fields.append("name/title")
+        if terms & goal_terms:
+            fields.append("Goal")
+        reason_parts = []
+        if identity_overlap:
+            reason_parts.append(f"domain anchor: {', '.join(sorted(identity_overlap))}")
+        elif len(all_overlap) >= 2:
+            reason_parts.append(f"shared domain terms: {', '.join(sorted(all_overlap))}")
+        if phrase_matches:
+            reason_parts.append(f"shared phrase: {', '.join(phrase_matches)}")
+        item["reason"] = f"{'; '.join(reason_parts)}; matched: {', '.join(fields)}"
+        item.pop("task_text")
+        candidates.append(item)
+    return sorted(candidates, key=lambda item: (item["directory"], item["path"]))
+
+
+def _print_related_task_candidates(candidates):
+    print("Related existing tasks found; no task was created:")
+    for candidate in candidates:
+        print(f"  dir={candidate['directory']}")
+        print(f"    title={candidate['title'] or candidate['name']}")
+        print(f"    goal={candidate['goal'] or '(no Goal)'}")
+        print(f"    reason={candidate['reason']}")
+    print("Continue an existing task above, or create a separate task explicitly with --allow-related.")
+
+
+def cmd_create(name, from_inbox=None, description=None, allow_duplicate=False, allow_related=False, parent=None):
     """Create a new task: directory + hash + meta + templates + (optional inbox file/dir move)."""
     slug = re.sub(r'[^a-z0-9-]', '', name.lower().replace(' ', '-')).strip('-')
     if not slug:
@@ -716,6 +845,12 @@ def cmd_create(name, from_inbox=None, description=None, allow_duplicate=False, p
         for duplicate in duplicates:
             print(f"  {duplicate}")
         print("Use --allow-duplicate only when a separate task is intentional.")
+        return False
+    # Keep --allow-duplicate compatible: once explicitly allowed, the same-name
+    # entries do not become a second, unrelated confirmation gate.
+    related = find_related_tasks(name, description, exclude_paths=duplicates if allow_duplicate else ())
+    if related and not allow_related:
+        _print_related_task_candidates(related)
         return False
     h = hash6()
     ts = datetime.now().strftime('%Y%m%d-%H%M%S')
@@ -974,6 +1109,8 @@ new commands:
                         help='(create) task goal / description text')
     parser.add_argument('--allow-duplicate', action='store_true', default=False,
                         help='(create) bypass exact-name duplicate prevention')
+    parser.add_argument('--allow-related', action='store_true', default=False,
+                        help='(create) create despite related-task candidates')
     parser.add_argument('--parent', dest='parent', default=None,
                         help='(create) create as a contained subtask of an existing task')
     parser.add_argument('--name', dest='task_name', default=None,
@@ -993,7 +1130,7 @@ new commands:
         'list':       lambda: cmd_list(args.args[0] if args.args else None),
 
         'ensure-all': cmd_ensure_all,
-        'create':     lambda: cmd_create(args.args[0], from_inbox=args.from_inbox, description=args.description, allow_duplicate=args.allow_duplicate, parent=args.parent) if args.args else False,
+        'create':     lambda: cmd_create(args.args[0], from_inbox=args.from_inbox, description=args.description, allow_duplicate=args.allow_duplicate, allow_related=args.allow_related, parent=args.parent) if args.args else False,
         'accept':     lambda: cmd_accept(args.args[0], name=args.task_name) if args.args else False,
         'decline':    lambda: cmd_decline(args.args[0], reason=args.reason) if args.args else False,
         'status':     lambda: cmd_status(args.args[0], args.args[1], reason=args.reason) if len(args.args) >= 2 else False,

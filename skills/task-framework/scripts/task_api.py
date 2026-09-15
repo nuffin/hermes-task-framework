@@ -124,16 +124,23 @@ def command_reconcile(identifier: str, result_json: str) -> dict:
 
 
 def command_search(query: str) -> list[dict]:
+    """Search canonical task metadata plus TASK.md body text."""
     terms = [item.lower() for item in query.split() if item.strip()]
     results = []
-    for raw in manage_task._find_all_task_dirs():
+    for raw in manage_task._find_discovered_task_dirs():
         item = describe_path(Path(raw).resolve())
+        task_text = read_text(Path(raw) / "TASK.md")
         haystack = " ".join(
             str(item.get(key, "")) for key in ("directory", "hash", "name", "title", "goal", "status")
-        ).lower()
-        if all(term in haystack for term in terms):
+        ) + " " + task_text
+        if all(term in haystack.lower() for term in terms):
             results.append(item)
-    return results
+    return sorted(results, key=lambda item: (item["directory"], item["path"]))
+
+
+def command_related(name: str, description: str | None = None) -> list[dict]:
+    """Return create-preflight candidates using manage_task's shared parser."""
+    return manage_task.find_related_tasks(name, description)
 
 
 def command_get_meta(identifier: str, key: str | None) -> object:
@@ -176,6 +183,9 @@ def main() -> int:
     describe_parser.add_argument("identifier")
     search_parser = commands.add_parser("search")
     search_parser.add_argument("query")
+    related_parser = commands.add_parser("related")
+    related_parser.add_argument("name")
+    related_parser.add_argument("--desc", dest="description", default=None)
     get_parser = commands.add_parser("get-meta")
     get_parser.add_argument("identifier")
     get_parser.add_argument("key", nargs="?")
@@ -199,6 +209,8 @@ def main() -> int:
             result = command_describe(args.identifier)
         elif args.command == "search":
             result = command_search(args.query)
+        elif args.command == "related":
+            result = command_related(args.name, args.description)
         elif args.command == "get-meta":
             result = command_get_meta(args.identifier, args.key)
         elif args.command == "reconcile":
