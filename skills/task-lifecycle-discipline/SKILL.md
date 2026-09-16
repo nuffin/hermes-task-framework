@@ -42,7 +42,9 @@ Use only:
 python3 <task-framework>/scripts/manage_task.py create <name> --desc "<goal>"
 ```
 
-Creation must produce `TASK.md`, `README.md`, `MEMORY.md`, `CHANGELOG.md`, `.hermes-task.json`, `input/`, `output/docs/`, `output/logs/`, and `scripts/`, then regenerate root indexes.
+Creation must produce `TASK.md`, `README.md`, `MEMORY.md`, `CHANGELOG.md`, `.hermes-task.json`, `input/`, `output/docs/`, `output/logs/`, `cache/`, and `scripts/`, then regenerate root indexes. `cache/` is task-owned reproducible working state and is preserved by a hard reset; it is never a delivery directory.
+
+The task directory is the default filesystem boundary. A project repository, device, service, cache root, temporary worktree, or any other target outside the task directory may be read or modified only when the current user instruction explicitly names it or `TASK.md` lists it under `## Authorized External Targets` with its allowed operations and authorization source. Never infer external scope from related-task context or a matching project name.
 
 Never hand-generate hashes or metadata. `HERMES_TASKS_ROOT` is canonical; `HERMES_TASKS_DIR` is compatibility-only.
 

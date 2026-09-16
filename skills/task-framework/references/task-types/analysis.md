@@ -2,7 +2,7 @@
 
 ## 创建
 
-1. 创建 `tasks/<ts>.<name>-<hash6>/` 目录，含 `input/` `output/` `scripts/`
+1. 创建 `tasks/<ts>.<name>-<hash6>/` 目录，含 `input/` `output/` `cache/` `scripts/`
 2. 从 inbox 复制源文件（PDF、DOCX、图片等）到 `input/`
 3. 写入 `TASK.md`，Data Flow 中将源文件路径写为 `input/<filename>`
 4. 写入 `.hermes-task.json`
@@ -11,9 +11,9 @@
 
 1. 从 `input/` 读取源文件
 2. 生成分析文档写入 `output/docs/`
-3. **如果 TASK.md 有 `## Repo` 字段：** 设计文档/分析报告放到 Repo 路径下（如 `{Repo}/docs/`），而不是 `output/docs/`
+3. 分析文档写入 `output/docs/`；只有当前用户指名的外部交付目标，或 `## Authorized External Targets` 中逐项登记了写入操作的外部目标，才能作为例外写入
 4. 执行日志仍写入 `output/logs/`（日志始终在 task 目录）
-5. 最终交付物在上一步确定的路径中（Repo docs/ 或 output/docs/）
+5. 最终交付物默认在 `output/docs/`
 
 示例目录结构：
 
@@ -28,6 +28,8 @@ tasks/<ts>.<name>-<hash6>/
 │   │   └── 03-prd-modules.md
 │   └── logs/
 │       └── output.20260610-152823.log
+├── cache/
+│   └── reproducible-work-state/
 ├── TASK.md
 ├── README.md
 ├── CHANGELOG.md

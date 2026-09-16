@@ -24,15 +24,28 @@ active — <brief description of current work>
 
 - `<skill-name>` — <该 skill 在本任务中的用途>
 
-## Repo
+## Scope Boundary
 
-<!-- 可选字段。若任务关联独立的项目仓库，在此声明路径。
-     所有源码级产出（设计文档、代码、配置、测试）放到此仓库中，
-     而非 task/output/。执行日志和调试信息仍放在 task/output/logs/。
-     没有此字段时，所有产出放 task/output/（默认行为）。 -->
+The task directory is the default and only filesystem boundary. Every read,
+write, build, cache, worktree, log, package, Git operation, cleanup, and
+temporary artifact stays inside this task directory unless the current
+conversation explicitly names an external target or that target is listed in
+`## Authorized External Targets` below.
 
-路径: `<absolute path to project repo>`
-用途: <一句话描述>
+Do not infer external scope from a repository name, a sibling directory, a
+previous task, an environment variable, or a convenient cache/worktree path.
+An unlisted external path is out of scope.
+
+## Authorized External Targets
+
+<!-- Leave this table empty when no external target is authorized. Each row
+     must name an absolute path or concrete external object, its exact allowed
+     operations, and the user instruction or task requirement granting scope.
+     A project repository is not implicitly writable merely because it is
+     related to this task. -->
+
+| Absolute path or concrete external object | Purpose | Allowed operations | Authorization source |
+|---|---|---|---|
 
 ## Affinity (cluster task)
 

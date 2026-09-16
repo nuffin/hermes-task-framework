@@ -171,7 +171,23 @@ The canonical tasks root is defined by `$HERMES_TASKS_ROOT` or configuration (de
 
 **`output/` 目录** — 存放所有生成文件（分析文档、执行日志、pipeline 产物如 tts-*/RECORDING.md/COMPOSITING.md 等）。**核心规则：所有删除操作只针对 `output/`。**
 
-`task_reset --hard` 默认清空 `output/`，不动 `input/`。
+**`cache/` 目录** — 存放需在任务内保留、可再生成但必须可追溯的工作状态（例如构建缓存、烧录页、Flash read-back、收据）。`cache/` 不是交付目录，正式交付物仅能放在任务明确的 `deliveries/`。
+
+`task_reset --hard` 默认清空 `output/`，不动 `input/` 或 `cache/`。
+
+### Default filesystem boundary
+
+The task directory is the default filesystem boundary for every operation:
+reading, writing, building, caching, creating a worktree, logging, packaging,
+Git operations, cleanup, and temporary artifacts. Do not use an external path
+unless the current user instruction explicitly names the target or `TASK.md`
+lists it under `## Authorized External Targets` with the exact absolute path or
+concrete external object, allowed operations, and authorization source.
+
+Related project names, sibling directories, previous task context, environment
+variables, and convenient home-cache or `/tmp` paths never grant external
+scope. When no target is explicitly listed, all work remains in the task
+directory.
 
 ### 自定义清理脚本
 

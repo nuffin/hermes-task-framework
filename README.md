@@ -8,8 +8,18 @@ trackable task directories — cross-session, cross-profile, cross-machine.
 | Layer | What | Examples |
 |-------|------|----------|
 | **Methodology** | How to decompose complex work | Operation catalog (`info-search`, `code-write`…), composite patterns (`software-dev`, `research`) |
-| **Container** | Physical task directory structure | `tasks/<ts>.<name>-<hash6>/` with `TASK.md`, `MEMORY.md`, `CHANGELOG.md`, `input/`, `output/` |
+| **Container** | Physical task directory structure | `tasks/<ts>.<name>-<hash6>/` with `TASK.md`, `MEMORY.md`, `CHANGELOG.md`, `input/`, `output/`, `cache/` |
 | **Tooling** | Reusable scripts | `manage_task.py` (lifecycle), `update-index.py` (index), `task-runner.sh` (logging) |
+
+## Scope boundary
+
+Each task directory is the default and only filesystem boundary. External
+repositories, devices, services, temporary worktrees, and cache locations are
+out of scope unless the current user instruction explicitly names them or the
+task's `## Authorized External Targets` table records the exact target, allowed
+operations, and authorization source. `cache/` is task-owned reproducible
+working state; formal delivery artifacts belong only in `deliveries/` when a
+task defines that directory.
 
 ## Skills
 

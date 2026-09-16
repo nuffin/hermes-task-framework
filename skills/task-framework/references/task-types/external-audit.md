@@ -2,20 +2,19 @@
 
 ## 创建
 
-1. 创建 `tasks/<ts>.<name>-<hash6>/` 目录，含 `output/` `scripts/`（不需要 `input/`）
-2. 在 TASK.md 的 Data Flow 中列出**外部源文件路径**（绝对路径，如 `~/project/docs/*.md`）
-3. 写入 `TASK.md`，注明"不可修改外部文件"
+1. 创建 `tasks/<ts>.<name>-<hash6>/` 目录，含 `input/` `output/` `cache/` `scripts/`
+2. 在 `TASK.md` 的 `## Authorized External Targets` 表中列出每个**外部源文件路径**（精确绝对路径，如 `/home/example/project/docs/overview.md`）、允许的只读操作和授权来源；不得使用 `~`、glob或目录通配符代替一个明确目标
+3. 写入 `TASK.md`，注明外部目标默认不可修改；不得由仓库名称或关联关系推断额外范围
 4. 写入 `.hermes-task.json`
 
 ## 执行
 
-1. 通过绝对路径读取外部源文件（`read_file`, `search_files` 工具）
+1. 只读取当前用户明确指名的外部目标，或 `## Authorized External Targets` 中逐项列出的精确绝对路径（`read_file`, `search_files` 工具）
 2. 将分析产出写入 `output/docs/`
-3. **如果 TASK.md 有 `## Repo` 字段：** 分析报告/审计文档放到 Repo 路径下（如 `{Repo}/docs/`），而不是 `output/docs/`
-4. 执行日志仍写入 `output/logs/`（日志始终在 task 目录）
-5. 最终交付物在上一步确定的路径中（Repo docs/ 或 output/docs/）
+3. 执行日志仍写入 `output/logs/`（日志始终在 task 目录）
+4. 最终交付物在 `output/docs/`，除非用户或任务要求明确登记了另一个外部交付目标
 
-**🔴 核心纪律：不得以任何方式修改 input 中引用的外部路径下的文件。** 不允许 `write_file`、`patch`、`terminal(mv/cp/rm)` 等操作触及外部路径。
+**🔴 核心纪律：外部路径必须逐项显式授权。** 未被当前用户明确指名、也未在任务表中登记的路径一律不得读取或操作；已授权的审计源默认只读，不允许 `write_file`、`patch`、`terminal(mv/cp/rm)` 等修改操作触及外部路径。
 
 示例目录结构：
 
@@ -27,6 +26,8 @@ tasks/<ts>.<name>-<hash6>/
 │   │   └── 02-recommendations.md
 │   └── logs/
 │       └── output.20260610-152823.log
+├── cache/
+│   └── reproducible-work-state/
 ├── TASK.md
 ├── README.md
 └── .hermes-task.json

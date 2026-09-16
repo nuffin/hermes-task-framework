@@ -332,7 +332,10 @@ def _ensure_task_files(task_dir, h):
             }, f, indent=2, ensure_ascii=False)
         print(f"  Created: {meta_f}")
 
-    for d in ['input', 'output']:
+    # cache/ is task-owned, non-delivery state such as reproducible build
+    # caches, programming pages, read-backs, and receipts.  It is deliberately
+    # separate from output/, which task_reset --hard may clear.
+    for d in ['input', 'output', 'cache']:
         dp = os.path.join(task_dir, d)
         os.makedirs(dp, exist_ok=True)
 
@@ -781,7 +784,13 @@ def cmd_create(name, from_inbox=None, description=None, allow_duplicate=False, p
     os.makedirs(task_dir, exist_ok=True)
 
     # Subdirs
-    for sub in ['input', os.path.join('output', 'docs'), os.path.join('output', 'logs'), 'scripts']:
+    for sub in [
+        'input',
+        os.path.join('output', 'docs'),
+        os.path.join('output', 'logs'),
+        'cache',
+        'scripts',
+    ]:
         os.makedirs(os.path.join(task_dir, sub), exist_ok=True)
 
     # .hermes-task.json
