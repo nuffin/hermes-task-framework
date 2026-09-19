@@ -49,7 +49,7 @@ tags:
 - operations
 - logging
 - pdf
-version: 1.4.0
+version: 1.5.0
 ---
 
 ---
@@ -172,6 +172,41 @@ The canonical tasks root is defined by `$HERMES_TASKS_ROOT` or configuration (de
 **`output/` 目录** — 存放所有生成文件（分析文档、执行日志、pipeline 产物如 tts-*/RECORDING.md/COMPOSITING.md 等）。**核心规则：所有删除操作只针对 `output/`。**
 
 `task_reset --hard` 默认清空 `output/`，不动 `input/`。
+
+### External Deliverable Boundary
+
+This boundary applies to the body and presentation metadata of any deliverable intended for an author, client, public audience, or other external recipient, regardless of whether the artifact is Markdown, HTML, PDF, DOCX, slideware, or another rendered format. It does **not** alter task logs, task metadata, or technical paths that remain inside the task container.
+
+- Present source and comparison material only as a human-facing filename supplied by the user or as a recipient-appropriate citation. State the evidence and its applicability; never expose its storage location.
+- Do not include task-framework storage or layout identifiers: `input/`, `output/`, `references/`, `sections/`, task directory names, task timestamps or hashes, absolute paths, or task-relative paths.
+- Do not describe internal execution or orchestration: task-framework, internal workflow, implementation planning, phase, worker, agent, delegation, dispatch, L1, or L2. Rewrite any necessary provenance as the evidence reviewed and why it supports the statement.
+- Keep material provenance that a recipient needs to assess claims, but express it as a citation or filename plus evidence applicability, not as a storage location, task identity, or execution history.
+
+#### Pre-delivery sanitization checklist
+
+Before handing off an external deliverable:
+
+1. Review body text, title/cover, headers, footers, comments, speaker notes, document properties, HTML metadata, link targets, and visible attachment names.
+2. Replace each internal source/comparison path with the supplied filename or a recipient-facing citation; retain only evidence applicability that is material to the recipient.
+3. Remove task-framework layout segments, task directory timestamps/hashes, absolute and task-relative paths, and execution/orchestration labels from the recipient-visible artifact.
+4. Extract rendered text from the final PDF or other rendered output and inspect it together with the source artifact; sanitizing Markdown alone is insufficient.
+5. Retain original paths, logs, metadata, and technical task records inside the task container for auditability; do not sanitize or delete those internal records.
+
+#### Text verification pattern
+
+Run a recipient-visible text scan before delivery. For Markdown or HTML, scan the artifact text directly; for PDF, scan extracted text. Adapt the file argument and review every match rather than silently deleting it:
+
+```bash
+scan_external_text() {
+  case "$1" in
+    *.pdf) pdftotext "$1" - ;;
+    *) cat "$1" ;;
+  esac | grep -nEi '(^|[^[:alnum:]_])((input|output|references|sections)/|/[^[:space:]]+/(input|output|references|sections)/|[0-9]{8}-[0-9]{6}[.][^[:space:]/]+-[a-f0-9]{6}|task-framework|internal workflow|implementation planning|\b(L1|L2)\b|\b(worker|delegation|dispatch)\b)' || true
+}
+scan_external_text <recipient-visible-artifact>
+```
+
+This pattern is a review aid, not an automatic redaction rule. Terms such as “Agent” may be substantive domain content (for example, a software product or a legal/biological role); retain them when they are part of the recipient-facing subject matter and remove them only when they label internal workflow or personnel roles.
 
 ### 自定义清理脚本
 
