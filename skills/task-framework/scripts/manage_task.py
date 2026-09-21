@@ -781,7 +781,7 @@ def cmd_create(name, from_inbox=None, description=None, allow_duplicate=False, p
     os.makedirs(task_dir, exist_ok=True)
 
     # Subdirs
-    for sub in ['input', os.path.join('output', 'docs'), os.path.join('output', 'logs'), 'scripts']:
+    for sub in ['input', os.path.join('output', 'docs'), os.path.join('output', 'logs'), 'scripts', 'tmp']:
         os.makedirs(os.path.join(task_dir, sub), exist_ok=True)
 
     # .hermes-task.json
@@ -983,7 +983,7 @@ def cmd_reset(hash_or_dir, hard=True):
         print(f"Task not found: {hash_or_dir}")
         return False
 
-    # 1. Clear output/ (hard mode)
+    # 1. Clear output/ + tmp/ (hard mode)
     output_dir = os.path.join(task_dir, 'output')
     if hard and os.path.isdir(output_dir):
         shutil.rmtree(output_dir)
@@ -991,6 +991,11 @@ def cmd_reset(hash_or_dir, hard=True):
         for sub in ['docs', 'logs']:
             os.makedirs(os.path.join(output_dir, sub), exist_ok=True)
         print(f"  Cleared output/")
+    tmp_dir = os.path.join(task_dir, 'tmp')
+    if hard and os.path.isdir(tmp_dir):
+        shutil.rmtree(tmp_dir)
+        os.makedirs(tmp_dir, exist_ok=True)
+        print(f"  Cleared tmp/")
 
     # 2. Reset checkboxes [x] → [ ] (preserve [x] DONE:)
     task_md = os.path.join(task_dir, 'TASK.md')
