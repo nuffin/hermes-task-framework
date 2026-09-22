@@ -165,6 +165,7 @@ The canonical tasks root is defined by `$HERMES_TASKS_ROOT` or configuration (de
 🔴 **Semantic disambiguation (important):** When the user says "任务" or "task", first determine whether they mean (a) a task-framework managed task (in `tasks/YY.../` directories) or (b) a generic concept. Clues: specific name/timestamp, operating on a task directory → (a); abstract discussion → (b). For (a), always use task-framework tools (task_create, task_set_status, etc.) — never raw `mv`/`cp`/`rm` on task directories. For (b), handle as normal conversation.
 
 ```\ntasks/\n├── README.md                  ← summary index (directory façade)\n├── TASKS.md                   ← aggregated checklist view (done/total per task)\n├── YYYYMMDD-HHMMSS.<task-name>-<hash6>/\n│   ├── README.md              ← goal, scope, key findings\n│   ├── TASK.md                ← checklist with status + checkboxes\n│   ├── CHANGELOG.md           ← per-task chronological decisions, state, and findings\n│   ├── MEMORY.md              ← compact §-delimited durable facts; REQUIRED\n│   ├── memories/              ← optional for long-running multi-subsystem tasks\n│   │   └── <sub-system>/\n│   │       ├── MEMORY.md      ← stable subsystem facts and constraints\n│   │       └── CHANGELOG.md   ← subsystem operations, decisions, and verification
+│   ├── tmp/                   ← **task-local scratch** — the ONLY sanctioned place for temporary files created while working this task
 │   ├── input/                 ← **source files** — NEVER deleted by cleanup operations\n│   │                           (PDF, DOCX, images, REQUIREMENTS.md copied from inbox)\n│   ├── output/                ← **generated files** — CAN be safely deleted entirely\n│   │   ├── docs/              ← analysis documents, reports (for analysis tasks)\n│   │   ├── logs/              ← execution logs\n│   │   ├── tts-<hash6>/       ← pipeline phase dirs (for pipeline tasks)\n│   │   ├── RECORDING.md       ← pipeline generated specs\n│   │   ├── COMPOSITING.md\n│   │   └── ...\n│   ├── inbox/                 ← proposal inbox (one file/dir per idea)\n│   └── declined/              ← rejected proposals (with DECLINED.md)\n```
 
 **`input/` 目录** — 存放从 inbox 复制来的源文件（PDF、DOCX、图片、REQUIREMENTS.md 等）。**核心规则：所有删除操作不得触及 `input/`。**
@@ -188,6 +189,8 @@ Related project names, sibling directories, previous task context, environment
 variables, and convenient home-cache or `/tmp` paths never grant external
 scope. When no target is explicitly listed, all work remains in the task
 directory.
+
+🔴 **临时文件边界（task tmp/ rule）** — 任务执行期间产生的所有临时文件（中间产物、pytest/构建缓存、探测脚本输出、下载的临时件、任何非交付物）必须创建在该任务自己的 `tmp/` 目录下（`<task>/tmp/`；子代理在该任务内工作同样受此约束）。禁止写到任务目录之外的任何位置——包括 `$HOME` 顶层、`/tmp`、系统 temp、repo 根或其他任务目录。工具自带路径参数的优先重定向到 `<task>/tmp/`（例：pytest `--basetemp=<task>/tmp/pytest`）；无法重定向的工具产物在运行后立即清理。`tmp/` 不进 git（tasks repo `.gitignore` 已忽略），`task_reset --hard` 与自定义 `scripts/clean.sh` 一并清空它——需要留档的内容放 `output/`，不要放 `tmp/`。
 
 ### 自定义清理脚本
 
