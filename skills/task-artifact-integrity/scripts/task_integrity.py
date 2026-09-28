@@ -53,6 +53,49 @@ def relation_hashes(metadata: dict) -> list[str]:
     return sorted(set(values))
 
 
+def parse_runtime_index(root: Path) -> tuple[list[str], str | None]:
+    """Return (indexed item names, INDEX.md presence error).
+
+    Rows are markdown table lines ``| <item> | <status> | ... |``; lines inside
+    HTML comments and the header/separator are ignored.
+    """
+    index_path = root / "runtime" / "INDEX.md"
+    items: list[str] = []
+    if not index_path.is_file():
+        return [], "runtime/ exists but runtime/INDEX.md is missing"
+    in_comment = False
+    for line in index_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if "<!--" in stripped:
+            in_comment = True
+        if not in_comment and stripped.startswith("|"):
+            cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+            if len(cells) >= 2 and cells[0] and not set(cells[0]) <= {"-", " "} and cells[0] != "条目" and cells[0] != "item":
+                items.append(cells[0])
+        if "-->" in stripped:
+            in_comment = False
+    return items, None
+
+
+def check_runtime_consistency(root: Path) -> tuple[list[str], list[str]]:
+    """Compare runtime/INDEX.md rows against actual runtime/<item>/ directories."""
+    errors: list[str] = []
+    warnings: list[str] = []
+    runtime = root / "runtime"
+    if not runtime.is_dir():
+        return errors, warnings
+    indexed, index_error = parse_runtime_index(root)
+    if index_error:
+        errors.append(index_error)
+        return errors, warnings
+    actual = sorted(entry.name for entry in runtime.iterdir() if entry.is_dir())
+    orphan = sorted(set(indexed) - set(actual))
+    unregistered = sorted(set(actual) - set(indexed))
+    errors.extend(f"runtime index orphan entry (no directory): {name}" for name in orphan)
+    warnings.extend(f"runtime item not registered in INDEX.md: {name}" for name in unregistered)
+    return errors, warnings
+
+
 def audit(identifier: str) -> dict:
     description = task_api.command_describe(identifier)
     root = Path(description["path"])
@@ -94,6 +137,9 @@ def audit(identifier: str) -> dict:
     for dirname in ("input", "output", "scripts"):
         if not (root / dirname).is_dir():
             warnings.append(f"missing standard directory: {dirname}/")
+    runtime_errors, runtime_warnings = check_runtime_consistency(root)
+    errors.extend(runtime_errors)
+    warnings.extend(runtime_warnings)
     symlinks = inspect_task(root)
     errors.extend(
         f"symlink policy: {entry['path']}: {entry['reason']}"

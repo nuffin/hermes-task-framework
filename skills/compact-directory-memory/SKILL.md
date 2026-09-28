@@ -1,7 +1,7 @@
 ---
 author: Hauzer S. Lee
 category: software-development
-description: Manage paired MEMORY.md/CHANGELOG.md in flat or nested directory contexts.
+description: Manage paired MEMORY.md/CHANGELOG.md and runtime/ execution-state formats in flat or nested directory contexts.
 license: MIT
 metadata:
   hermes:
@@ -14,22 +14,28 @@ metadata:
     - directory-context
     - hierarchical-memory
     - task-framework
+    - runtime-state
     relations:
     - type: complemented_by
       target: task-context-storage
       properties:
         reason: task-context-storage defines which persistence layer owns each fact
         strength: strong
+    - type: complemented_by
+      target: task-framework
+      properties:
+        reason: task-framework owns runtime/ item lifecycle (create/complete/block); this skill owns runtime/ file formats
+        strength: strong
 name: compact-directory-memory
 platforms:
 - linux
 - macos
-version: 3.0.0
+version: 3.1.0
 ---
 
 # Compact Directory Memory
 
-The authoritative format and maintenance skill for paired `MEMORY.md` and `CHANGELOG.md` files inside projects, tasks, and other directory-managed entities.
+The authoritative format and maintenance skill for paired `MEMORY.md` and `CHANGELOG.md` files — and for `runtime/` execution-state file formats — inside projects, tasks, and other directory-managed entities.
 
 `task-framework` decides when task context must be loaded. This skill owns how directory context is structured, formatted, created, read, updated, and verified.
 
@@ -117,6 +123,52 @@ Subsystem names are lowercase kebab-case. Every subsystem directory must contain
 - Subsystem `CHANGELOG.md`: detailed work history for that subsystem.
 
 Root files are indexes and syntheses, not copies of subsystem files.
+
+## Runtime execution state (`runtime/`)
+
+A task (or any directory-managed entity) may carry a `runtime/` directory of resumable execution state. Ownership is split: `task-framework` owns the item **lifecycle** (when to create a `runtime/<item>/`, when to mark it done or blocked, how subtasks nest their own `runtime/`); this skill owns the **file formats** below.
+
+```text
+<entity>/
+└── runtime/
+    ├── INDEX.md          # master index — one row per item
+    └── <item>/           # one dir per requirement / bugfix / phase
+        ├── TODO.md       # items to complete
+        ├── LOG.md        # append-only execution log
+        └── MEMORY.md     # discoveries made during execution
+```
+
+`runtime/` is not a delivery directory; it exists so a machine restart or context compression can resume from disk instead of chat history.
+
+### `TODO.md`
+
+Checklist of items, each phrased with its acceptance criterion:
+
+```markdown
+- [ ] <item>（<验收标准>）
+- [x] <completed item>
+```
+
+### `LOG.md`
+
+Append-only execution log — same semantics as `CHANGELOG.md`: append entries, never rewrite history. Entries are short lines of time + action + result (commands, commits, verification outcomes). Raw command output goes to `output/logs/`, not here.
+
+### item `MEMORY.md`
+
+Discoveries made during execution: paths, root causes, pitfalls, constraints. Follows the `MEMORY.md` format section above — compact `§`-separated declarative facts. Transient progress status belongs in `LOG.md` or `INDEX.md`, never here.
+
+### `INDEX.md`
+
+Master index and recovery snapshot — the first entry point after restart or context compression. One row per `runtime/<item>/`:
+
+```markdown
+| item | status | notes / blocked reason | last updated |
+|------|--------|------------------------|--------------|
+```
+
+- Status values: `done` / `todo` / `blocked`.
+- `blocked` rows must state the reason.
+- Every status change (completed, blocked) must be written back to this table in the same working session.
 
 ## Read protocol
 

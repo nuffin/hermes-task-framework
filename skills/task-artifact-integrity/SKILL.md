@@ -16,7 +16,7 @@ metadata:
       properties: {reason: hierarchical context files are part of task closure, strength: strong}
 name: task-artifact-integrity
 platforms: [linux, macos]
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Task Artifact Integrity
@@ -29,6 +29,7 @@ A complete task closure includes:
 
 - `TASK.md`, `README.md`, `MEMORY.md`, `CHANGELOG.md`, `.hermes-task.json`;
 - `memories/<sub-system>/MEMORY.md` and `CHANGELOG.md` pairs when hierarchical;
+- when `runtime/` exists: `INDEX.md` rows must match the actual `runtime/` item directories — flag orphan INDEX entries (row without directory) and unregistered items (directory without row);
 - `input/`, `output/`, and `scripts/` inventories;
 - named outputs, dependencies, related/superseded tasks, ticket/project extension fields;
 - absolute paths and cross-task references.
@@ -74,7 +75,7 @@ The commands are read-only and emit JSON. `post-flight` is the per-task integrit
 ## Permanent tooling
 
 ```bash
-python3 scripts/task_integrity.py audit <hash-or-dir>
+python3 scripts/task_integrity.py audit <hash-or-dir>          # includes runtime/INDEX.md vs runtime/ consistency
 python3 scripts/task_integrity.py symlinks <hash-or-dir>
 python3 scripts/task_integrity.py post-flight <hash-or-dir>
 python3 scripts/task_integrity.py closure <hash-or-dir>

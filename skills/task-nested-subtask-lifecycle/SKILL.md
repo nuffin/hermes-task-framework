@@ -1,7 +1,7 @@
 ---
 name: task-nested-subtask-lifecycle
 description: "Use when a related TODO needs an independently managed child task."
-version: 1.0.0
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 category: hermes
@@ -9,6 +9,10 @@ metadata:
   hermes:
     scenes: [hermes, common]
     tags: [task-framework, nested-task, subtask, lifecycle, containment]
+    relations:
+    - type: depends_on
+      target: compact-directory-memory
+      properties: {reason: owns runtime/ file formats for nested subtask runtime directories, strength: strong}
 ---
 
 # Nested Subtask Lifecycle
@@ -28,6 +32,11 @@ python3 skills/task-framework/scripts/manage_task.py create <name> \
 The child is created only under `<parent>/subtasks/` and receives its own
 `TASK.md`, `MEMORY.md`, `CHANGELOG.md`, metadata, input, and output. Children
 cannot create further children. Never hand-edit metadata or move child dirs.
+
+A child may nest its own `runtime/` execution-state directory (formats owned
+by `compact-directory-memory`). The child's `runtime/INDEX.md` is independent:
+the parent's INDEX records the child only at subtask granularity — one row for
+the child itself, never the child's internal runtime items.
 
 ## Route and verify
 

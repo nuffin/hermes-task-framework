@@ -54,6 +54,39 @@ class TaskIntegrityTests(unittest.TestCase):
         result = json.loads(process.stdout)
         self.assertIn("missing canonical file: MEMORY.md", result["errors"])
 
+    def test_audit_flags_runtime_index_mismatch(self):
+        runtime = self.task_dir / "runtime"
+        item = runtime / "20260928-demo-item"
+        item.mkdir(parents=True)
+        (item / "TODO.md").write_text("- [ ] x（验收）\n", encoding="utf-8")
+        (runtime / "INDEX.md").write_text(
+            "# runtime/ 执行状态总索引\n\n"
+            "| 条目 | 状态 | 说明 | 最近更新 |\n"
+            "|------|------|------|----------|\n"
+            "| 20260928-demo-item | todo | demo | 2026-09-28 12:00 |\n"
+            "| 20260928-orphan-entry | done | orphan | 2026-09-28 12:00 |\n",
+            encoding="utf-8",
+        )
+        unregistered = runtime / "20260928-unregistered"
+        unregistered.mkdir()
+        result = json.loads(self.run_integrity("audit", self.task_hash, check=False).stdout)
+        self.assertFalse(result["ok"])
+        self.assertTrue(any("orphan entry" in error for error in result["errors"]))
+        self.assertTrue(any("not registered" in warning for warning in result["warnings"]))
+
+    def test_audit_accepts_consistent_runtime_index(self):
+        runtime = self.task_dir / "runtime"
+        item = runtime / "20260928-demo-item"
+        item.mkdir(parents=True)
+        (runtime / "INDEX.md").write_text(
+            "| item | status | notes | last updated |\n"
+            "|------|--------|-------|--------------|\n"
+            "| 20260928-demo-item | done | demo | 2026-09-28 12:00 |\n",
+            encoding="utf-8",
+        )
+        result = json.loads(self.run_integrity("audit", self.task_hash).stdout)
+        self.assertTrue(result["ok"])
+
     def test_manifest_compare_detects_changes(self):
         destination = Path(self.temp.name) / "destination"
         shutil.copytree(self.task_dir, destination)

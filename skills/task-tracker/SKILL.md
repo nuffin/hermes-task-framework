@@ -15,6 +15,12 @@ metadata:
     - hermes
     - tracking
     - bookkeeping
+    relations:
+    - type: depends_on
+      target: compact-directory-memory
+      properties:
+        reason: owns the runtime/INDEX.md format that tracker writes back
+        strength: strong
 name: task-tracker
 tags:
 - task
@@ -22,7 +28,7 @@ tags:
 - task-framework
 - checklist
 - memory
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Task Tracker
@@ -48,7 +54,8 @@ version: 1.0.0
 
 1. 读取 `TASK.md`
 2. 找到包含 `<phase>` 文本的 `- [ ]` 行，改为 `- [x]`
-3. 在 `CHANGELOG.md` 末尾追加记录：
+3. 同步回写 `runtime/INDEX.md`：任务使用 `runtime/` 执行状态时，phase 对应条目状态变化（完成→`done`，阻塞→`blocked`+原因）必须在同一次回写中更新，保持索引与实际状态一致（格式见 `compact-directory-memory`）
+4. 在 `CHANGELOG.md` 末尾追加记录：
 
 ```markdown
 ## <phase> — <executor>
@@ -63,7 +70,7 @@ version: 1.0.0
 - **下一步**: <next>
 ```
 
-4. 运行 `python3 scripts/update-index.py  # from the skill directory`
+5. 运行 `python3 scripts/update-index.py  # from the skill directory`
 
 ## 使用示例
 
@@ -87,7 +94,7 @@ version: 1.0.0
 - CHANGELOG.md 追加格式
 - update-index.py 调用
 
-task-framework 不需要知道 `task-tracker` 的存在——它只提供 task 容器。`task-tracker` 是独立工具，消费 task-framework 的产出格式。
+task-framework 不需要知道 `task-tracker` 的存在——它只提供 task 容器。`task-tracker` 是独立工具，消费 task-framework 的产出格式（`runtime/INDEX.md` 回写即其中之一，格式由 `compact-directory-memory` 定义）。
 
 ## 与 orchestrator 的关系
 
