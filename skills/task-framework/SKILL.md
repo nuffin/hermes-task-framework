@@ -156,7 +156,25 @@ optional and POSIX-only; the Python entrypoints work directly on Windows.
 source ~/.hermes/env.sh
 ```
 
-Root resolution order is: `HERMES_TASKS_ROOT`, `HERMES_TASKS_DIR` compatibility alias, active-profile `tasks.data_dir`, global `tasks.data_dir`, then `~/studio/hermes/tasks`. The historical `~/.hermes/tasks` directory is compatibility-only: never create, mirror, populate, or symlink task directories there. When a custom `tasks.data_dir` is configured, it is the only task root used.
+Root resolution order is `HERMES_TASKS_ROOT`, `HERMES_TASKS_DIR` compatibility alias, active-profile `tasks.data_dir`, global `tasks.data_dir`, then `~/studio/hermes/tasks`. The historical `~/.hermes/tasks` directory is compatibility-only: never create, mirror, populate, or symlink task directories there. When a custom `tasks.data_dir` is configured, it is the only task root used.
+
+🔴 **Wrong-root creation: recover by move, never delete-and-recreate.** When
+`manage_task.py create` lands a task in the wrong root (e.g. a project's work
+task created under `~/studio/hermes/tasks/` because the shell did not export
+`HERMES_TASKS_ROOT`), the directory is self-contained (`.hermes-task.json`
+stores no absolute paths), so recovery is:
+
+1. `mv <wrong-root>/<ts>.<name>-<hash6>/ <correct-root>/`
+2. Re-run `update-index.py --tasks-dir` on BOTH roots (old root drops the
+   stale index entry, new root gains it).
+
+Delete-and-recreate is forbidden for this case: it mints a NEW hash, and any
+reference already emitted against the old hash (issue comments, parent
+manifests, `ref:<hash6>/...` links, delegation briefs) silently breaks. The
+"never raw `mv` on task dirs" rule targets lifecycle semantics (renaming,
+deleting, restructuring); relocating an intact directory between roots
+preserves identity and is the correct fix. Prevention: verify the target root
+(echo `$HERMES_TASKS_ROOT`, or pass it explicitly) before `create`.
 
 ## Task Directory Structure
 
@@ -1434,7 +1452,7 @@ CHANGELOG.md 的创建和维护是 post-flight 后置链的固定组成部分。
 | **🔴 Never fill task placeholders from conversation history** | When user says \"create a task named X\", create an empty template with all `{placeholder}` intact. Do NOT infer URL, steps, or operations from earlier chat context unless user explicitly says \"根据上面的对话\" or similar. Corrected multiple times — the user will delete and re-create if you guess. |\n| **🔴 File moves must be ln/cp + verify + rm** | Never `mv`. Use `ln <src> <dst>`, verify with `ls -la`, then `rm <src>`. |
 | **🔴 Missing `## 环境要求` in TASK.md** | Executor pre-flight forces this check. Always include it. |
 | **🔴 Confirm CWD before creating tasks** | Project root must have `tasks/` dir. If not, confirm user expects `$HERMES_TASKS_ROOT/` as base. |
-| **🔴 "tasks" naming ambiguity + no manual management** | When user says "tasks" or "task", first disambiguate: (a) task-framework managed → use task_create/task_set_status/etc., never raw `mv`/`cp`/`rm` on task dirs; (b) generic concept → normal conversation. Corrected: manual `mv` on a task dir instead of using framework. |
+| 🔴 **"tasks" naming ambiguity + no manual management** | When the user says "tasks" or "task", first disambiguate: (a) task-framework managed → use task_create/task_set_status/etc., never raw `mv`/`cp`/`rm` on task dirs; (b) generic concept → normal conversation. Corrected: manual `mv` on a task dir instead of using framework. **Exception — wrong-root relocation IS a raw `mv`**: when a task was created under the wrong tasks-root, moving the intact directory to the correct root (then re-indexing both roots) preserves the hash/identity and is the correct fix; see "Wrong-root creation" under Environment Variables. Delete-and-recreate mints a new hash and breaks every emitted reference. |
 | 🔴 Log accumulation | Clean old logs with `rm tasks/*.<name>/logs/*.YYYYMMDD-*.log`. |
 | 🔴 Root index files stale | After creating/updating/deleting any task, run `python3 scripts/update-index.py  # from the skill directory` to regenerate both `tasks/README.md` and `tasks/TASKS.md`. Users rely on these indexes for overview. |
 | **🔴 Data Flow table not consulted** | In cross-skill composite tasks, a phase that produces a file (e.g. TTS → `audio_manifest.json`) must write it in the format expected by the consumer phase. The `## Data Flow` table's `格式说明` column tells you where to find that format spec. Don't guess the schema — load the referenced skill/reference file and read it. Corrected in discussion about how compositing finds audio manifest format. |
